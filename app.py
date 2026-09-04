@@ -1,17 +1,17 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import yfinance as yf
-import feedparser
 from google import genai
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
+import requests
+import zoneinfo
 
 # ---------------------------------------------------------
-# CONFIGURATION & STYLE BLOOMBERG / FINANCIALJUICE
+# CONFIGURATION & STYLE BLOOMBERG / FOREX FACTORY
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Terminal Trader Pro",
+    page_title="Terminal Trader Pro — Forex Factory",
     page_icon="⚡",
     layout="wide"
 )
@@ -34,146 +34,155 @@ st.markdown("""
     .metric-title { color: #848e9c; font-size: 0.7rem; font-weight: 600; }
     .metric-value { font-size: 1rem; font-weight: bold; }
     
-    /* CSS FINANCIALJUICE LIVE FEED */
-    .fj-container {
+    /* STYLE FOREX FACTORY CALENDAR */
+    .ff-container {
         background-color: #12161c;
         border: 1px solid #2a2e39;
-        border-radius: 4px;
-        padding: 4px;
-        max-height: 520px;
+        border-radius: 6px;
+        padding: 8px;
+        max-height: 560px;
         overflow-y: auto;
     }
-    .fj-row {
+    .ff-day-header {
+        background-color: #1f242d;
+        color: #f0b90b;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        border-radius: 4px;
+        margin-top: 8px;
+        margin-bottom: 6px;
+        border-left: 3px solid #f0b90b;
+    }
+    .ff-row {
         display: flex;
         align-items: center;
-        padding: 5px 8px;
+        justify-content: space-between;
+        padding: 6px 8px;
         border-bottom: 1px solid #1e222d;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 0.75rem;
-    }
-    .fj-row-alert {
-        background-color: rgba(255, 77, 77, 0.22);
+        font-size: 0.78rem;
+        background-color: rgba(255, 77, 77, 0.08);
         border-left: 4px solid #ff4d4d;
+        margin-bottom: 4px;
+        border-radius: 3px;
     }
-    .fj-row-normal {
-        border-left: 4px solid #2962ff;
-    }
-    .fj-time {
-        color: #848e9c;
+    .ff-time {
+        color: #00ff88;
         font-weight: bold;
         min-width: 50px;
+        font-family: 'Courier New', Courier, monospace;
     }
-    .fj-badge {
-        background-color: #2962ff;
-        color: white;
-        padding: 1px 5px;
-        border-radius: 3px;
-        font-size: 0.65rem;
-        font-weight: bold;
-        margin-right: 6px;
-    }
-    .fj-badge-red {
+    .ff-currency {
         background-color: #ff4d4d;
         color: white;
-        padding: 1px 5px;
+        padding: 2px 6px;
         border-radius: 3px;
-        font-size: 0.65rem;
         font-weight: bold;
-        margin-right: 6px;
+        font-size: 0.7rem;
+        min-width: 42px;
+        text-align: center;
+        margin-right: 8px;
     }
-    .fj-text {
-        color: #d1d4dc;
+    .ff-title {
+        color: #ffffff;
+        font-weight: 600;
+        flex-grow: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        padding-right: 10px;
+    }
+    .ff-val-box {
+        display: flex;
+        gap: 12px;
+        font-size: 0.72rem;
+        color: #848e9c;
+        min-width: 140px;
+        justify-content: flex-end;
+    }
+    .ff-val {
+        color: #d1d4dc;
+        font-weight: 500;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1>⚡ TERMINAL TRADER PRO — PURE FINANCIALJUICE SQUAWK</h1>", unsafe_allow_html=True)
+st.markdown("<h1>⚡ TERMINAL TRADER PRO — FOREX FACTORY RED CALENDAR</h1>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# FLUX TRADING 100% PURS (DAILYFX + FOREXLIVE + GOOGLE MACRO)
+# RÉCUPÉRATION DU FLUX JSON OFFICIEL FOREX FACTORY
 # ---------------------------------------------------------
-@st.cache_data(ttl=60)
-def fetch_pure_trading_news():
-    urls = [
-        "https://www.dailyfx.com/feeds/market-news",
-        "https://www.forexlive.com/feed",
-        "https://news.google.com/rss/search?q=FED+OR+ECB+OR+inflation+OR+S%26P500+OR+Forex+when:1d&hl=en-US&gl=US&ceid=US:en"
-    ]
-    
-    # Mots banni à 100% (Vie quotidienne, héritage, personal finance)
-    banned_words = [
-        "GRANDSON", "WILL", "DIED", "LEGGINGS", "RETIREMENT", "MARRIAGE", "FAMILY", 
-        "HUSBAND", "WIFE", "MORTGAGE", "HOUSE", "DOG", "CAT", "PANTS", "NEPHEW", "HERITAGE",
-        "INHERIT", "SON", "DAUGHTER", "KID", "CHILD", "RELATIONSHIP", "MONEYIST", "PAY CHECK"
-    ]
-    
-    # Mots-clés requis pour la Macro / Trading
-    macro_keywords = [
-        "FED", "ECB", "BOJ", "BOE", "INFLATION", "CPI", "PPI", "RATE", "CUT", "HIKE", 
-        "POWELL", "LAGARDE", "YIELD", "BOND", "TREASURY", "DOLLAR", "EUR", "USD", "JPY", 
-        "GBP", "GOLD", "OIL", "CRUDE", "STOCK", "S&P", "NASDAQ", "DOW", "EARNINGS", 
-        "REVENUE", "PROFIT", "SEC", "CENTRAL BANK", "ECONOMY", "JOBS", "NFP", "UNEMPLOYMENT",
-        "MARKET", "RALLY", "SLUMP", "FUTURES", "SURGE", "PLUNGE", "TARIFF", "TRADE", "FX"
-    ]
-    
-    clean_news = []
-    seen_titles = set()
-    
-    for url in urls:
-        try:
-            feed = feedparser.parse(url)
-            for entry in feed.entries:
-                t = entry.title
-                t_upper = t.upper()
-                
-                # Déduplication et filtrage anti-bruit
-                if t in seen_titles:
-                    continue
-                if any(bad in t_upper for bad in banned_words):
-                    continue
-                    
-                # Vérification de pertinence macro/trading
-                if "dailyfx" in url or "forexlive" in url or any(good in t_upper for good in macro_keywords):
-                    clean_news.append(entry)
-                    seen_titles.add(t)
-        except Exception:
-            pass
+@st.cache_data(ttl=120)  # Mise à jour automatique toutes les 2 minutes (120 sec)
+def fetch_forex_factory_red_folder():
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            events = response.json()
             
-    # Secours via Yahoo Finance API si le flux RSS est restreint
-    if len(clean_news) < 5:
-        try:
-            spy = yf.Ticker("^GSPC")
-            if hasattr(spy, 'news') and spy.news:
-                for item in spy.news:
-                    title = item.get('title', '')
-                    if title and title not in seen_titles and not any(bad in title.upper() for bad in banned_words):
-                        class DummyEntry:
-                            def __init__(self, t):
-                                self.title = t
-                                self.published_parsed = None
-                        clean_news.append(DummyEntry(title))
-                        seen_titles.add(title)
-        except Exception:
-            pass
+            # Conversion vers le fuseau horaire Europe/Paris
+            try:
+                paris_tz = zoneinfo.ZoneInfo("Europe/Paris")
+                now_paris = datetime.now(paris_tz)
+            except Exception:
+                paris_tz = None
+                now_paris = datetime.now()
+                
+            today_date = now_paris.date()
+            tomorrow_date = today_date + timedelta(days=1)
+            
+            parsed_events = []
+            for item in events:
+                # Filtrage strict : UNIQUEMENT les annonces HIGH IMPACT (Rouge)
+                if item.get("impact") == "High":
+                    date_str = item.get("date", "")
+                    if date_str:
+                        dt = datetime.fromisoformat(date_str)
+                        if paris_tz:
+                            dt_local = dt.astimezone(paris_tz)
+                        else:
+                            dt_local = dt
+                            
+                        ev_date = dt_local.date()
+                        
+                        # Conservation exclusive pour Aujourd'hui et Demain
+                        if ev_date == today_date:
+                            day_cat = f"📅 AUJOURD'HUI ({dt_local.strftime('%d/%m')})"
+                        elif ev_date == tomorrow_date:
+                            day_cat = f"📅 DEMAIN ({dt_local.strftime('%d/%m')})"
+                        else:
+                            continue
+                            
+                        parsed_events.append({
+                            "category": day_cat,
+                            "time_str": dt_local.strftime("%H:%M"),
+                            "currency": item.get("country", "USD"),
+                            "title": item.get("title", ""),
+                            "forecast": item.get("forecast", "-"),
+                            "previous": item.get("previous", "-")
+                        })
+            return parsed_events
+    except Exception as e:
+        st.error(f"Erreur de connexion avec Forex Factory : {e}")
+    return []
 
-    return clean_news
+ff_events = fetch_forex_factory_red_folder()
 
-all_news = fetch_pure_trading_news()
-top_headline = all_news[0].title.upper() if all_news else "AUCUNE DEPECHE D'URGENCE"
+# Tête de gondole : Prochaine annonce majeure
+top_alert = "AUCUNE ANNONCE ROUGE RESTANTE AUJOURD'HUI OU DEMAIN"
+if ff_events:
+    top_alert = f"PROCHAIN IMPACT ROUGE : [{ff_events[0]['currency']}] {ff_events[0]['title']} à {ff_events[0]['time_str']} — Forecast: {ff_events[0]['forecast']}"
 
 st.markdown(f"""
 <div style="background-color: #2b0000; border: 1px solid #ff4d4d; border-radius: 4px; padding: 2px 8px; margin-top: 4px; margin-bottom: 8px;">
     <marquee behavior="scroll" direction="left" scrollamount="7" style="color: #ff4d4d; font-weight: bold; font-size: 0.78rem;">
-        🚨 SQUAWK FINANCIALJUICE : {top_headline} — 🚨 ALERTE MACRO ET MARCHÉS EN DIRECT
+        🚨 FOREX FACTORY RED ALERT : {top_alert}
     </marquee>
 </div>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# TICKEUR COURS
+# BANDEAU DE COURS
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def fetch_market_data():
@@ -213,6 +222,7 @@ if market_data:
 
 st.divider()
 
+# Fonction IA Gemini Flash
 def query_gemini(prompt_text):
     if "GEMINI_API_KEY" not in st.secrets:
         return "Clé API Gemini non configurée."
@@ -226,9 +236,12 @@ def query_gemini(prompt_text):
     except Exception as e:
         return f"Erreur IA : {str(e)}"
 
+# ---------------------------------------------------------
+# PANNEAUX PRINCIPAUX
+# ---------------------------------------------------------
 col_left, col_center, col_right = st.columns([1, 1.4, 1])
 
-# --- COLONNE GAUCHE ---
+# --- COLONNE GAUCHE : FINVIZ & TOP MOVERS ---
 with col_left:
     st.subheader("📈 FINVIZ — HEATMAP SECTORIELLE")
     @st.cache_data(ttl=300)
@@ -267,74 +280,54 @@ with col_left:
     })
     st.dataframe(movers_data, hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : PURE FINANCIALJUICE SQUAWK & FEED ---
+# --- COLONNE CENTRALE : EXCLUSIF FOREX FACTORY RED NEWS ---
 with col_center:
-    st.subheader("🔴 FINANCIALJUICE — REAL-TIME SQUAWK & FEED")
-    
-    clean_speech_text = top_headline.replace("'", "\\'").replace('"', '\\"')
-    squawk_js = f"""
-    <div style="background-color:#171b21; padding:6px; border-radius:4px; border:1px solid #2a2e39; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
-        <span style="color:#ff4d4d; font-weight:bold; font-size:0.75rem;">🎙️ AUDIO SQUAWK BOT :</span>
-        <button onclick="playSquawk()" style="background-color:#ff4d4d; color:white; border:none; padding:4px 10px; border-radius:3px; font-weight:bold; cursor:pointer; font-size:0.7rem; margin-left:10px;">
-            🔊 ÉCOUTER LA DERNIÈRE DEPECHE
-        </button>
-    </div>
-    <script>
-    function playSquawk() {{
-        var msg = new SpeechSynthesisUtterance('{clean_speech_text}');
-        msg.lang = 'en-US';
-        msg.rate = 1.0;
-        window.speechSynthesis.speak(msg);
-    }}
-    </script>
-    """
-    components.html(squawk_js, height=45)
-    
-    if all_news:
-        fj_html = '<div class="fj-container">'
-        for idx, item in enumerate(all_news[:12]):
-            title = item.title
-            
-            time_str = datetime.now().strftime("%H:%M")
-            if hasattr(item, 'published_parsed') and item.published_parsed:
-                time_str = f"{item.published_parsed.tm_hour:02d}:{item.published_parsed.tm_min:02d}"
-            
-            t_upper = title.upper()
-            if any(k in t_upper for k in ["FED", "CPI", "INFLATION", "POWELL", "ECB", "RATE", "BOJ", "JOBS", "NFP"]):
-                badge_tag = "MACRO/CENTRAL BANK"
-                is_urgent = True
-            elif any(k in t_upper for k in ["USD", "EUR", "JPY", "GBP", "FOREX"]):
-                badge_tag = "FOREX"
-                is_urgent = False
-            elif any(k in t_upper for k in ["STOCKS", "EARNINGS", "CEO", "S&P", "NASDAQ", "SHARES"]):
-                badge_tag = "EQUITIES"
-                is_urgent = False
-            else:
-                badge_tag = "MARKETS"
-                is_urgent = "BREAKING" in t_upper
-            
-            row_class = "fj-row-alert" if is_urgent else "fj-row-normal"
-            badge_class = "fj-badge-red" if is_urgent else "fj-badge"
-            
-            fj_html += f"""
-            <div class="fj-row {row_class}">
-                <span class="fj-time">{time_str}</span>
-                <span class="{badge_class}">{badge_tag}</span>
-                <span class="fj-text" title="{title}">{title}</span>
+    col_hdr1, col_hdr2 = st.columns([3, 1])
+    with col_hdr1:
+        st.subheader("🔴 FOREX FACTORY — HIGH IMPACT ONLY")
+    with col_hdr2:
+        if st.button("🔄 Rafraîchir", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+
+    if ff_events:
+        html_out = '<div class="ff-container">'
+        current_cat = ""
+        
+        for ev in ff_events:
+            if ev['category'] != current_cat:
+                current_cat = ev['category']
+                html_out += f'<div class="ff-day-header">{current_cat}</div>'
+                
+            html_out += f"""
+            <div class="ff-row">
+                <span class="ff-time">{ev['time_str']}</span>
+                <span class="ff-currency">{ev['currency']}</span>
+                <span class="ff-title" title="{ev['title']}">{ev['title']}</span>
+                <div class="ff-val-box">
+                    <span>Prév: <b class="ff-val">{ev['forecast']}</b></span>
+                    <span>Préc: <b class="ff-val">{ev['previous']}</b></span>
+                </div>
             </div>
             """
-        fj_html += '</div>'
-        st.markdown(fj_html, unsafe_allow_html=True)
-        
+        html_out += '</div>'
+        st.markdown(html_out, unsafe_allow_html=True)
+    else:
+        st.info("Aucune annonce économique majeure à fort impact (Dossier Rouge) prévue pour Aujourd'hui ou Demain.")
+
     st.divider()
     
-    st.subheader("⚡ Analyse Flash IA Gemini")
-    if st.button("🔍 Analyser la dépêche en tête avec Gemini"):
-        with st.spinner("Analyse par l'IA..."):
-            prompt = f"Analyse cette dépêche de marché : '{top_headline}'. Réponds uniquement : 1. IMPACT (HAUSSIER/BAISSIER/NEUTRE) 2. ACTIFS TOUCHÉS 3. EXPLICATION (10 mots max)."
-            st.info(query_gemini(prompt))
+    st.subheader("⚡ Analyse IA du Prochain Événement")
+    if st.button("🔍 Analyser le risque du prochain événement rouge"):
+        if ff_events:
+            nxt = ff_events[0]
+            with st.spinner("Analyse par Gemini..."):
+                prompt = f"L'événement économique '{nxt['title']}' sur la devise {nxt['currency']} a lieu à {nxt['time_str']}. Prévision: {nxt['forecast']}, Précédent: {nxt['previous']}. En 2 phrases, explique l'impact attendu si la donnée dépasse la prévision."
+                st.info(query_gemini(prompt))
+        else:
+            st.write("Aucune annonce rouge à analyser.")
 
-# --- COLONNE DROITE ---
+# --- COLONNE DROITE : BLOOMBERG MACRO & PROMPT ---
 with col_right:
     st.subheader("🌐 BLOOMBERG — MACRO & TAUX")
     @st.cache_data(ttl=300)
@@ -364,7 +357,7 @@ with col_right:
 
     st.divider()
     st.subheader("💬 Prompt IA Terminal")
-    user_query = st.text_input("Question Macro :", placeholder="Ex: Impact DXY sur l'Or...", label_visibility="collapsed")
+    user_query = st.text_input("Question Macro :", placeholder="Ex: Impact NFP supérieur aux attentes...", label_visibility="collapsed")
     if user_query:
         with st.spinner("Analyse..."):
-            st.info(query_gemini(f"Expert macro, réponds court : {user_query}"))
+            st.info(query_gemini(f"Expert macro trading, réponds très court : {user_query}"))
