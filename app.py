@@ -103,7 +103,7 @@ if mkt:
     cols = st.columns(len(mkt))
     for i, (k, (v, c)) in enumerate(mkt.items()):
         with cols[i]:
-            col = "#00ff88" if c >= 0 else "#ff4d4d"
+            col = "#00ff88" if c >= 0 else "#ff3b30"
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-title">{k}</div>
@@ -115,7 +115,7 @@ if mkt:
 st.divider()
 
 # ---------------------------------------------------------
-# FONCTION GEMINI IA (CORRIGÉE VERS gemini-3.6-flash)
+# FONCTION GEMINI IA
 # ---------------------------------------------------------
 def query_gemini(prompt):
     if "GEMINI_API_KEY" not in st.secrets:
@@ -179,7 +179,7 @@ with c_left:
     df_sec = fetch_sectors()
     if not df_sec.empty:
         fig = px.bar(df_sec, x="Var %", y="Secteur", orientation="h", color="Var %",
-                     color_continuous_scale=["#ff4d4d", "#171b21", "#00ff88"], color_continuous_midpoint=0, text_auto=True)
+                     color_continuous_scale=["#ff3b30", "#171b21", "#00ff88"], color_continuous_midpoint=0, text_auto=True)
         fig.update_layout(paper_bgcolor="#0c0f12", plot_bgcolor="#171b21", font=dict(color="#d1d4dc", size=10),
                           margin=dict(l=5, r=5, t=5, b=5), height=200, coloraxis_showscale=False)
         st.plotly_chart(fig, use_container_width=True)
@@ -191,7 +191,7 @@ with c_left:
         "Chg (%)": ["+3.4%", "-2.1%", "+0.8%", "+4.1%", "-0.4%"]
     }), hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW + NEWS ---
+# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW + NEWS BLOOMBERG RED ---
 with c_center:
     st.subheader("🔴 CALENDRIER ÉCONOMIQUE (TRADINGVIEW)")
     
@@ -214,11 +214,30 @@ with c_center:
     components.html(tv_widget, height=385)
 
     st.subheader("📰 FLUX ACTU MARCHÉS (REUTERS / YAHOO FINANCE)")
+    
+    # CHARTE COULEUR BLOOMBERG RED
+    BLOOMBERG_RED = "#ff3b30"
+    RED_BG = "rgba(255, 59, 48, 0.12)"
+    STANDARD_GREEN = "#00ff88"
+
     if news_feed:
-        cards_html = "".join([
-            f'<div style="background-color: #171b21; border-left: 3px solid #00ff88; padding: 6px 10px; margin-bottom: 6px; border-radius: 4px;"><a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a><div style="color: #848e9c; font-size: 0.65rem; margin-top: 2px;">Source : {n["source"]}</div></div>'
-            for n in news_feed
-        ])
+        cards_list = []
+        for i, n in enumerate(news_feed):
+            # Les 2 actualités les plus récentes passent en HIGH IMPACT avec le rouge Bloomberg
+            is_high_impact = i < 2
+            
+            border_col = BLOOMBERG_RED if is_high_impact else STANDARD_GREEN
+            bg_col = RED_BG if is_high_impact else "#171b21"
+            badge_html = f'<span style="background-color: {BLOOMBERG_RED}; color: #ffffff; font-size: 0.55rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; margin-right: 6px;">HIGH IMPACT</span>' if is_high_impact else ''
+            
+            cards_list.append(
+                f'<div style="background-color: {bg_col}; border-left: 4px solid {border_col}; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px;">'
+                f'<div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<span style="color: #848e9c; font-size: 0.65rem;">Source : {n["source"]}</span></div>'
+                f'<a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a>'
+                f'</div>'
+            )
+            
+        cards_html = "".join(cards_list)
         st.markdown(f'<div class="news-container">{cards_html}</div>', unsafe_allow_html=True)
     else:
         st.info("Aucune actualité chargée.")
@@ -243,7 +262,7 @@ with c_right:
     macro_data = fetch_macro()
     if macro_data:
         for k, (v, c) in macro_data.items():
-            col = "#00ff88" if c >= 0 else "#ff4d4d"
+            col = "#00ff88" if c >= 0 else BLOOMBERG_RED
             st.markdown(f"**{k}** : `{v:,.2f}` (<span style='color:{col}'>{c:+.2f}%</span>)", unsafe_allow_html=True)
 
     st.divider()
