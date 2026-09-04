@@ -38,6 +38,27 @@ st.markdown("""
         max-height: 280px;
         overflow-y: auto;
     }
+    
+    /* Style personnalisé des Onglets */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #12161c;
+        padding: 4px;
+        border-radius: 6px;
+        border: 1px solid #2a2e39;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #171b21;
+        border-radius: 4px;
+        color: #848e9c;
+        font-weight: 600;
+        padding: 6px 16px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #f0b90b !important;
+        color: #0c0f12 !important;
+        font-weight: bold;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,7 +66,7 @@ st.markdown("""
 components.html("<script>setTimeout(function(){ window.location.reload(); }, 900000);</script>", height=0)
 
 # ---------------------------------------------------------
-# HORLOGES TEMPS RÉEL (JS)
+# HORLOGES TEMPS RÉEL (JS) - PERMANENT EN HAUT
 # ---------------------------------------------------------
 header_html = """
 <style>
@@ -84,7 +105,7 @@ header_html = """
 components.html(header_html, height=75)
 
 # ---------------------------------------------------------
-# BANDEAU DÉFILANT D'ALERTE MACRO (BLOOMBERG RED)
+# BANDEAU DÉFILANT D'ALERTE MACRO (PERMANENT)
 # ---------------------------------------------------------
 texte_alerte = "🚨 ALERTE MACRO : Publication NFP & Taux de chômage US à 14:30 — Risque de volatilité extrême sur USD, Or et S&P 500 !"
 
@@ -125,7 +146,7 @@ def generate_sparkline(series, width=120, height=32, color="#00ff88"):
     </svg>'''
 
 # ---------------------------------------------------------
-# BANDEAU MARKET DATA 1M (RAFRAÎCHISSEMENT 60S)
+# BANDEAU MARKET DATA 1M (PERMANENT EN HAUT)
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def fetch_market_data():
@@ -162,11 +183,11 @@ if mkt:
 st.divider()
 
 # ---------------------------------------------------------
-# FONCTION GEMINI IA (gemini-3.6-flash)
+# FONCTIONS IA & NEWS
 # ---------------------------------------------------------
 def query_gemini(prompt):
     if "GEMINI_API_KEY" not in st.secrets:
-        return "Clé API Gemini non configurée."
+        return "Clé API Gemini non configurée dans st.secrets."
     try:
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
         res = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
@@ -174,9 +195,6 @@ def query_gemini(prompt):
     except Exception as e:
         return f"Erreur IA : {e}"
 
-# ---------------------------------------------------------
-# RECUPERATION DES NEWS YFINANCE (RAFRAÎCHISSEMENT 15 MIN)
-# ---------------------------------------------------------
 @st.cache_data(ttl=900)
 def fetch_yf_news():
     news_items = []
@@ -202,113 +220,139 @@ def fetch_yf_news():
 news_feed = fetch_yf_news()
 
 # ---------------------------------------------------------
-# LAYOUT PRINCIPAL (3 COLONNES)
+# SYSTEME D'ONGLETS (PAGE PRINCIPALE + 3 ONGLETS VIDES)
 # ---------------------------------------------------------
-c_left, c_center, c_right = st.columns([1.5, 1.2, 1])
+tab_main, tab_1, tab_2, tab_3 = st.tabs([
+    "⚡ Terminal Pro", 
+    "📁 Onglet 1", 
+    "📁 Onglet 2", 
+    "📁 Onglet 3"
+])
 
-# --- COLONNE GAUCHE : HEATMAP NASDAQ ---
-with c_left:
-    st.subheader("🔥 HEATMAP NASDAQ (PAR SECTEURS)")
-    
-    heatmap_html = """
-    <div class="tradingview-widget-container" style="height: 580px; width: 100%;">
-      <div class="tradingview-widget-container__widget" style="height: 580px; width: 100%;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
-      {
-        "exchanges": [],
-        "dataSource": "NASDAQ100",
-        "grouping": "sector",
-        "blockSize": "market_cap_basic",
-        "blockColor": "change",
-        "locale": "fr",
-        "symbolUrl": "",
-        "colorTheme": "dark",
-        "hasTopBar": false,
-        "isDataSetEnabled": false,
-        "isZoomEnabled": true,
-        "hasSymbolTooltip": true,
-        "width": "100%",
-        "height": "580"
-      }
-      </script>
-    </div>
-    """
-    components.html(heatmap_html, height=585)
+# =========================================================
+# ONGLET PRINCIPAL : PAGE D'ARRIVÉE
+# =========================================================
+with tab_main:
+    c_left, c_center, c_right = st.columns([1.5, 1.2, 1])
 
-# --- COLONNE CENTRALE : CALENDRIER + NEWS ---
-with c_center:
-    st.subheader("🔴 CALENDRIER ÉCONOMIQUE")
-    
-    tv_widget = """
-    <div class="tradingview-widget-container" style="width: 100%; height: 280px;">
-      <div class="tradingview-widget-container__widget" style="width: 100%; height: 280px;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-      {
-      "colorTheme": "dark",
-      "isTransparent": true,
-      "width": "100%",
-      "height": "280",
-      "locale": "fr",
-      "importanceFilter": "0,1",
-      "currencyFilter": "USD,EUR,GBP,JPY,CAD,AUD,CHF"
-    }
-      </script>
-    </div>
-    """
-    components.html(tv_widget, height=285)
+    # --- COLONNE GAUCHE : HEATMAP NASDAQ ---
+    with c_left:
+        st.subheader("🔥 HEATMAP NASDAQ (PAR SECTEURS)")
+        
+        heatmap_html = """
+        <div class="tradingview-widget-container" style="height: 580px; width: 100%;">
+          <div class="tradingview-widget-container__widget" style="height: 580px; width: 100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+          {
+            "exchanges": [],
+            "dataSource": "NASDAQ100",
+            "grouping": "sector",
+            "blockSize": "market_cap_basic",
+            "blockColor": "change",
+            "locale": "fr",
+            "symbolUrl": "",
+            "colorTheme": "dark",
+            "hasTopBar": false,
+            "isDataSetEnabled": false,
+            "isZoomEnabled": true,
+            "hasSymbolTooltip": true,
+            "width": "100%",
+            "height": "580"
+          }
+          </script>
+        </div>
+        """
+        components.html(heatmap_html, height=585)
 
-    st.subheader("📰 FLUX ACTU MARCHÉS")
-    
-    BLOOMBERG_RED = "#ff3b30"
-    RED_BG = "rgba(255, 59, 48, 0.12)"
-    STANDARD_GREEN = "#00ff88"
+    # --- COLONNE CENTRALE : CALENDRIER + NEWS ---
+    with c_center:
+        st.subheader("🔴 CALENDRIER ÉCONOMIQUE")
+        
+        tv_widget = """
+        <div class="tradingview-widget-container" style="width: 100%; height: 280px;">
+          <div class="tradingview-widget-container__widget" style="width: 100%; height: 280px;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+          {
+          "colorTheme": "dark",
+          "isTransparent": true,
+          "width": "100%",
+          "height": "280",
+          "locale": "fr",
+          "importanceFilter": "0,1",
+          "currencyFilter": "USD,EUR,GBP,JPY,CAD,AUD,CHF"
+        }
+          </script>
+        </div>
+        """
+        components.html(tv_widget, height=285)
 
-    if news_feed:
-        cards_list = []
-        for i, n in enumerate(news_feed):
-            is_high_impact = i < 2
-            border_col = BLOOMBERG_RED if is_high_impact else STANDARD_GREEN
-            bg_col = RED_BG if is_high_impact else "#171b21"
-            badge_html = f'<span style="background-color: {BLOOMBERG_RED}; color: #ffffff; font-size: 0.55rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; margin-right: 6px;">HIGH IMPACT</span>' if is_high_impact else ''
-            
-            cards_list.append(
-                f'<div style="background-color: {bg_col}; border-left: 4px solid {border_col}; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px;">'
-                f'<div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<span style="color: #848e9c; font-size: 0.65rem;">Source : {n["source"]}</span></div>'
-                f'<a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a>'
-                f'</div>'
-            )
-            
-        cards_html = "".join(cards_list)
-        st.markdown(f'<div class="news-container">{cards_html}</div>', unsafe_allow_html=True)
-    else:
-        st.info("Aucune actualité chargée.")
+        st.subheader("📰 FLUX ACTU MARCHÉS")
+        
+        BLOOMBERG_RED = "#ff3b30"
+        RED_BG = "rgba(255, 59, 48, 0.12)"
+        STANDARD_GREEN = "#00ff88"
 
-# --- COLONNE DROITE : MACRO & IA ---
-with c_right:
-    st.subheader("🌐 MACRO & TAUX")
-    @st.cache_data(ttl=900)
-    def fetch_macro():
-        tickers = {"Taux US 10Y": "^TNX", "Pétrole WTI": "CL=F", "EUR / USD": "EURUSD=X", "US Dollar Index": "DX-Y.NYB"}
-        res = {}
-        for name, tk in tickers.items():
-            try:
-                df = yf.Ticker(tk).history(period="2d")
-                if len(df) >= 2:
-                    c, p = df['Close'].iloc[-1], df['Close'].iloc[-2]
-                    res[name] = (c, ((c - p) / p) * 100)
-            except Exception:
-                pass
-        return res
+        if news_feed:
+            cards_list = []
+            for i, n in enumerate(news_feed):
+                is_high_impact = i < 2
+                border_col = BLOOMBERG_RED if is_high_impact else STANDARD_GREEN
+                bg_col = RED_BG if is_high_impact else "#171b21"
+                badge_html = f'<span style="background-color: {BLOOMBERG_RED}; color: #ffffff; font-size: 0.55rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; margin-right: 6px;">HIGH IMPACT</span>' if is_high_impact else ''
+                
+                cards_list.append(
+                    f'<div style="background-color: {bg_col}; border-left: 4px solid {border_col}; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px;">'
+                    f'<div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<span style="color: #848e9c; font-size: 0.65rem;">Source : {n["source"]}</span></div>'
+                    f'<a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a>'
+                    f'</div>'
+                )
+                
+            cards_html = "".join(cards_list)
+            st.markdown(f'<div class="news-container">{cards_html}</div>', unsafe_allow_html=True)
+        else:
+            st.info("Aucune actualité chargée.")
 
-    macro_data = fetch_macro()
-    if macro_data:
-        for k, (v, c) in macro_data.items():
-            col = "#00ff88" if c >= 0 else BLOOMBERG_RED
-            st.markdown(f"**{k}** : `{v:,.2f}` (<span style='color:{col}'>{c:+.2f}%</span>)", unsafe_allow_html=True)
+    # --- COLONNE DROITE : MACRO & IA ---
+    with c_right:
+        st.subheader("🌐 MACRO & TAUX")
+        @st.cache_data(ttl=900)
+        def fetch_macro():
+            tickers = {"Taux US 10Y": "^TNX", "Pétrole WTI": "CL=F", "EUR / USD": "EURUSD=X", "US Dollar Index": "DX-Y.NYB"}
+            res = {}
+            for name, tk in tickers.items():
+                try:
+                    df = yf.Ticker(tk).history(period="2d")
+                    if len(df) >= 2:
+                        c, p = df['Close'].iloc[-1], df['Close'].iloc[-2]
+                        res[name] = (c, ((c - p) / p) * 100)
+                except Exception:
+                    pass
+            return res
 
-    st.divider()
-    st.subheader("💬 Prompt IA Macro")
-    user_q = st.text_input("Question :", placeholder="Ex : Impact NFP ?", label_visibility="collapsed")
-    if user_q:
-        with st.spinner("Analyse..."):
-            st.info(query_gemini(f"Expert macro trading, réponds très court : {user_q}"))
+        macro_data = fetch_macro()
+        if macro_data:
+            for k, (v, c) in macro_data.items():
+                col = "#00ff88" if c >= 0 else BLOOMBERG_RED
+                st.markdown(f"**{k}** : `{v:,.2f}` (<span style='color:{col}'>{c:+.2f}%</span>)", unsafe_allow_html=True)
+
+        st.divider()
+        st.subheader("💬 Prompt IA Macro")
+        user_q = st.text_input("Question :", placeholder="Ex : Impact NFP ?", label_visibility="collapsed")
+        if user_q:
+            with st.spinner("Analyse..."):
+                st.info(query_gemini(f"Expert macro trading, réponds très court : {user_q}"))
+
+# =========================================================
+# ONGLETS VIDES (À PERSONNALISER)
+# =========================================================
+with tab_1:
+    st.subheader("📌 Onglet 1")
+    st.info("Espace libre : prêt à accueillir tes prochains widgets ou outils.")
+
+with tab_2:
+    st.subheader("📌 Onglet 2")
+    st.info("Espace libre : prêt à accueillir tes prochains widgets ou outils.")
+
+with tab_3:
+    st.subheader("📌 Onglet 3")
+    st.info("Espace libre : prêt à accueillir tes prochains widgets ou outils.")
