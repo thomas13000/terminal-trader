@@ -20,16 +20,6 @@ st.markdown("""
     
     h2, h3 { font-size: 0.85rem !important; font-weight: 600 !important; margin-top: 4px !important; margin-bottom: 4px !important; color: #848e9c !important; }
     
-    .metric-card {
-        background-color: #171b21;
-        border-radius: 4px;
-        padding: 6px;
-        border: 1px solid #2a2e39;
-        text-align: center;
-    }
-    .metric-title { color: #848e9c; font-size: 0.7rem; font-weight: 600; }
-    .metric-value { font-size: 1rem; font-weight: bold; }
-    
     .news-container {
         background-color: #12161c;
         border: 1px solid #2a2e39;
@@ -98,67 +88,48 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# GENERATION DE GRAPHICAL SPARKLINE (SVG 1 MIN)
+# BANDEAU MARKET DATA (5 GRAPHIQUES BOUGIES 1 MIN TEMPS RÉEL)
 # ---------------------------------------------------------
-def generate_sparkline(series, width=120, height=32, color="#00ff88"):
-    values = series.dropna().tolist()
-    if len(values) < 2:
-        return ""
-    
-    # Échantillonnage léger pour garder le HTML fluide
-    if len(values) > 120:
-        step = len(values) // 120
-        values = values[::step]
-        
-    min_val, max_val = min(values), max(values)
-    val_range = max_val - min_val if max_val != min_val else 1
-    
-    points = []
-    n = len(values)
-    for i, val in enumerate(values):
-        x = (i / (n - 1)) * width
-        y = height - ((val - min_val) / val_range) * (height - 6) - 3
-        points.append(f"{x:.1f},{y:.1f}")
-    
-    polyline = " ".join(points)
-    return f'''<svg width="100%" height="{height}" viewBox="0 0 {width} {height}" preserveAspectRatio="none" style="margin-top: 4px;">
-        <polyline fill="none" stroke="{color}" stroke-width="1.8" points="{polyline}"/>
-    </svg>'''
+top_tickers = [
+    {"name": "S&P 500", "symbol": "FOREXCOM:SPXUSD", "id": "tv_spx"},
+    {"name": "NASDAQ", "symbol": "FOREXCOM:NSXUSD", "id": "tv_ndx"},
+    {"name": "DXY", "symbol": "CAPITALCOM:DXY", "id": "tv_dxy"},
+    {"name": "GOLD", "symbol": "OANDA:XAUUSD", "id": "tv_gold"},
+    {"name": "VIX", "symbol": "CAPITALCOM:VIX", "id": "tv_vix"}
+]
 
-# ---------------------------------------------------------
-# BANDEAU MARKET DATA 1M (RAFRAÎCHISSEMENT 60S)
-# ---------------------------------------------------------
-@st.cache_data(ttl=60)
-def fetch_market_data():
-    tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "DXY": "DX-Y.NYB", "GOLD": "GC=F", "VIX": "^VIX"}
-    data = {}
-    for name, ticker in tickers.items():
-        try:
-            df = yf.Ticker(ticker).history(period="1d", interval="1m")
-            if not df.empty and len(df) >= 2:
-                curr = df['Close'].iloc[-1]
-                first = df['Close'].iloc[0]
-                pct = ((curr - first) / first) * 100
-                data[name] = (curr, pct, df['Close'])
-        except Exception:
-            pass
-    return data
-
-mkt = fetch_market_data()
-if mkt:
-    cols = st.columns(len(mkt))
-    for i, (k, (v, c, series)) in enumerate(mkt.items()):
-        with cols[i]:
-            col = "#00ff88" if c >= 0 else "#ff3b30"
-            sparkline = generate_sparkline(series, color=col)
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">{k}</div>
-                <div class="metric-value" style="color:{col};">{v:,.2f}</div>
-                <div style="color:{col}; font-size:0.7rem;">{c:+.2f}% (1m)</div>
-                {sparkline}
+cols = st.columns(5)
+for i, item in enumerate(top_tickers):
+    with cols[i]:
+        widget_code = f"""
+        <div style="background-color:#171b21; border:1px solid #2a2e39; border-radius:4px; overflow:hidden;">
+            <div style="color:#848e9c; font-size:0.7rem; font-weight:bold; text-align:center; padding:3px; background:#12161c; border-bottom:1px solid #2a2e39;">
+                {item['name']} (1m)
             </div>
-            """, unsafe_allow_html=True)
+            <div class="tradingview-widget-container" style="height:190px; width:100%;">
+                <div id="{item['id']}" style="height:190px; width:100%;"></div>
+                <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+                <script type="text/javascript">
+                new TradingView.widget({{
+                    "autosize": true,
+                    "symbol": "{item['symbol']}",
+                    "interval": "1",
+                    "timezone": "Europe/Paris",
+                    "theme": "dark",
+                    "style": "1",
+                    "locale": "fr",
+                    "toolbar_bg": "#171b21",
+                    "enable_publishing": false,
+                    "hide_top_toolbar": true,
+                    "hide_legend": true,
+                    "save_image": false,
+                    "container_id": "{item['id']}"
+                }});
+                </script>
+            </div>
+        </div>
+        """
+        components.html(widget_code, height=215)
 
 st.divider()
 
