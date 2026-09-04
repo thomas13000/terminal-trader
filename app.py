@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# COMPOSANT HTML 3D AUTONOME (GLOBE À GAUCHE + CARTES À DROITE)
+# COMPOSANT HTML 3D AUTONOME (HORLOGE À GAUCHE + GLOBE AU CENTRE + MARCHÉS À DROITE)
 # ---------------------------------------------------------
 def render_3d_welcome_overlay():
     html_code = """
@@ -29,13 +29,12 @@ def render_3d_welcome_overlay():
                 position: fixed;
                 top: 0; left: 0;
                 width: 100vw; height: 100vh;
-                background: radial-gradient(circle at 35% 50%, #0e131f 0%, #030406 100%);
+                background: radial-gradient(circle at center, #0e131f 0%, #030406 100%);
                 z-index: 99999999;
                 display: flex;
                 align-items: center;
-                justify-content: flex-end; /* Alignement de l'UI sur la droite */
-                padding-right: 5vw;
-                gap: 25px;
+                justify-content: space-between; /* Horloge tout à gauche, Marchés tout à droite */
+                padding: 0 4vw;
                 cursor: pointer;
             }
 
@@ -46,18 +45,18 @@ def render_3d_welcome_overlay():
                 z-index: 1;
             }
 
-            /* --- CARRE CENTRAL (HORLOGE) DECALÉ À DROITE --- */
-            .center-content {
+            /* --- BLOC HORLOGE (TOUT À GAUCHE) --- */
+            .left-panel {
                 position: relative;
                 z-index: 2;
                 text-align: center;
                 background: rgba(13, 17, 26, 0.82);
                 border: 1px solid rgba(240, 185, 11, 0.35);
-                padding: 35px 40px;
+                padding: 35px 35px;
                 border-radius: 20px;
                 backdrop-filter: blur(18px);
                 box-shadow: 0 0 70px rgba(0, 0, 0, 0.9), 0 0 30px rgba(240, 185, 11, 0.15);
-                width: 420px;
+                width: 380px;
             }
 
             .badge-live {
@@ -92,7 +91,7 @@ def render_3d_welcome_overlay():
 
             .clock-main {
                 font-family: 'JetBrains Mono', monospace;
-                font-size: 4.2rem;
+                font-size: 3.8rem;
                 font-weight: 800;
                 color: #ffffff;
                 text-shadow: 0 0 30px rgba(255, 255, 255, 0.25);
@@ -101,7 +100,7 @@ def render_3d_welcome_overlay():
             }
 
             .clock-sub {
-                font-size: 0.68rem;
+                font-size: 0.65rem;
                 color: #787b86;
                 letter-spacing: 1.5px;
                 text-transform: uppercase;
@@ -112,8 +111,8 @@ def render_3d_welcome_overlay():
                 background: linear-gradient(135deg, #f0b90b 0%, #d4a007 100%);
                 color: #090a0f;
                 border: none;
-                padding: 12px 28px;
-                font-size: 0.82rem;
+                padding: 12px 24px;
+                font-size: 0.8rem;
                 font-weight: 800;
                 letter-spacing: 1.5px;
                 border-radius: 8px;
@@ -128,7 +127,7 @@ def render_3d_welcome_overlay():
                 box-shadow: 0 6px 28px rgba(240, 185, 11, 0.55);
             }
 
-            /* --- PANNEAU LATÉRAL DROIT : PRICING WEBSOCKET TRADINGVIEW --- */
+            /* --- BLOC MARCHÉS (TOUT À DROITE) --- */
             .side-panel {
                 position: relative;
                 z-index: 2;
@@ -177,11 +176,11 @@ def render_3d_welcome_overlay():
     <body>
 
     <div id="welcome-screen-root" onclick="dismissOverlay()">
-        <!-- CANVAS THREE.JS -->
+        <!-- CANVAS THREE.JS (AU CENTRE) -->
         <canvas id="canvas-3d"></canvas>
 
-        <!-- BLOC HORLOGE (DECALÉ À DROITE) -->
-        <div class="center-content" onclick="event.stopPropagation()">
+        <!-- HORLOGE TOUT À GAUCHE -->
+        <div class="left-panel" onclick="event.stopPropagation()">
             <div class="badge-live"><span class="dot-pulse"></span> TERMINAL LIVE SESSION</div>
             <div class="clock-main" id="clock-display">00:00:00</div>
             <div class="clock-sub">HEURE DE PARIS — MARKET STANDBY</div>
@@ -189,7 +188,7 @@ def render_3d_welcome_overlay():
             <div class="hint-bottom">Cliquez n'importe où pour ouvrir la session</div>
         </div>
 
-        <!-- BLOC MARCHÉS EN TEMPS RÉEL -->
+        <!-- MARCHÉS TOUT À DROITE -->
         <div class="side-panel" onclick="event.stopPropagation()">
             <div class="side-panel-header">⚡ MARCHÉS TEMPS RÉEL</div>
             
@@ -244,7 +243,7 @@ def render_3d_welcome_overlay():
     </div>
 
     <script>
-        // --- 1. Plein écran automatique ---
+        // --- 1. Adaptation Plein Écran de l'Iframe ---
         function expandIframeToFullscreen() {
             try {
                 const iframes = window.parent.document.querySelectorAll('iframe');
@@ -263,7 +262,7 @@ def render_3d_welcome_overlay():
         }
         expandIframeToFullscreen();
 
-        // --- 2. Fermeture au clic ---
+        // --- 2. Masquer au clic ---
         function dismissOverlay() {
             const root = document.getElementById('welcome-screen-root');
             if (root) root.style.display = 'none';
@@ -278,7 +277,7 @@ def render_3d_welcome_overlay():
             } catch(e) {}
         }
 
-        // --- 3. Horloge Temps Réel ---
+        // --- 3. Horloge en Direct ---
         function updateClock() {
             const now = new Date();
             const timeStr = new Intl.DateTimeFormat('fr-FR', {
@@ -292,7 +291,7 @@ def render_3d_welcome_overlay():
         setInterval(updateClock, 1000);
         updateClock();
 
-        // --- 4. Globe Terrestre 3D Positionné sur la Gauche ---
+        // --- 4. Globe Terrestre 3D POSITIONNÉ EXACTEMENT AU CENTRE ---
         let scene, camera, renderer, globeGroup;
 
         function init3DGlobe() {
@@ -307,8 +306,8 @@ def render_3d_welcome_overlay():
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
             globeGroup = new THREE.Group();
-            // DECALAGE DU GLOBE À GAUCHE
-            globeGroup.position.x = -6.5;
+            // POSITION AU CENTRE EXACT (0, 0)
+            globeGroup.position.set(0, 0, 0);
             scene.add(globeGroup);
 
             // Structure Maillée Dorée
@@ -317,7 +316,7 @@ def render_3d_welcome_overlay():
                 color: 0xf0b90b,
                 wireframe: true,
                 transparent: true,
-                opacity: 0.22
+                opacity: 0.20
             });
             const globeMesh = new THREE.Mesh(globeGeo, globeMat);
             globeGroup.add(globeMesh);
@@ -349,7 +348,7 @@ def render_3d_welcome_overlay():
             const pointsMesh = new THREE.Points(ptsGeo, ptsMat);
             globeGroup.add(pointsMesh);
 
-            // Anneau Orbital
+            // Anneau Orbital Lumineux
             const ringGeo = new THREE.RingGeometry(11.8, 11.9, 64);
             const ringMat = new THREE.MeshBasicMaterial({ color: 0xf0b90b, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
             const ringMesh = new THREE.Mesh(ringGeo, ringMat);
