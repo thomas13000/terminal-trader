@@ -114,12 +114,15 @@ if mkt:
 
 st.divider()
 
+# ---------------------------------------------------------
+# FONCTION GEMINI IA (CORRIGÉE VERS gemini-3.6-flash)
+# ---------------------------------------------------------
 def query_gemini(prompt):
     if "GEMINI_API_KEY" not in st.secrets:
         return "Clé API Gemini non configurée."
     try:
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-        res = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        res = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return res.text
     except Exception as e:
         return f"Erreur IA : {e}"
@@ -192,7 +195,6 @@ with c_left:
 with c_center:
     st.subheader("🔴 CALENDRIER ÉCONOMIQUE (TRADINGVIEW)")
     
-    # Widget officiel TradingView (aucun blocage bot possible)
     tv_widget = """
     <div class="tradingview-widget-container" style="width: 100%; height: 380px;">
       <div class="tradingview-widget-container__widget" style="width: 100%; height: 380px;"></div>
@@ -211,10 +213,8 @@ with c_center:
     """
     components.html(tv_widget, height=385)
 
-    # --- SECTION NEWS YAHOO FINANCE (CORRIGÉE SANS RETOUR CODE) ---
     st.subheader("📰 FLUX ACTU MARCHÉS (REUTERS / YAHOO FINANCE)")
     if news_feed:
-        # Alignement strict à gauche sans espaces pour éviter la conversion en bloc de code
         cards_html = "".join([
             f'<div style="background-color: #171b21; border-left: 3px solid #00ff88; padding: 6px 10px; margin-bottom: 6px; border-radius: 4px;"><a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a><div style="color: #848e9c; font-size: 0.65rem; margin-top: 2px;">Source : {n["source"]}</div></div>'
             for n in news_feed
