@@ -136,7 +136,8 @@ with col_center:
 
 with col_right:
     st.subheader("🌐 Macro & Calendrier Éco")
-    st.info("⚙️ Prochaine étape : Taux US & Calendrier")import streamlit as st
+    st.info("⚙️ Prochaine étape : Taux US & Calendrier")
+import streamlit as st
 import yfinance as yf
 import feedparser
 from google import genai
