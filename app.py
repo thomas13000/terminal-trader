@@ -19,8 +19,8 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Marge haute augmentée pour éviter le chevauchement avec la barre Streamlit */
-    .block-container { padding-top: 2.5rem !important; padding-bottom: 0.8rem !important; }
+    /* Marge haute fortement augmentée pour passer sous la barre Streamlit */
+    .block-container { padding-top: 4.5rem !important; padding-bottom: 0.8rem !important; }
     .stApp { background-color: #0c0f12; color: #d1d4dc; }
     
     h2, h3 { font-size: 0.85rem !important; font-weight: 600 !important; margin-top: 4px !important; margin-bottom: 4px !important; color: #848e9c !important; }
