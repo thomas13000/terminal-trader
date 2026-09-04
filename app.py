@@ -1,10 +1,11 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
+import yfinance as yf
 import pandas as pd
 
 # ---------------------------------------------------------
-# CONFIGURATION PAGE & STYLE BLOOMBERG
+# CONFIGURATION PAGE & STYLE BASE
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="TERMINAL TRADER PRO",
@@ -60,12 +61,12 @@ header_html = """
 components.html(header_html, height=75)
 
 # ---------------------------------------------------------
-# BANDEAU DÉFILANT D'ALERTE MACRO
+# BANDEAU DÉFILANT D'ALERTE MACRO (ROUGE BLOOMBERG)
 # ---------------------------------------------------------
 texte_alerte = "🚨 ALERTE MACRO : Publication NFP & Taux de chômage US à 14:30 — Risque de volatilité extrême sur USD, Or et S&P 500 !"
 
 st.markdown(f"""
-<div style="background-color: rgba(255, 59, 48, 0.15); border: 1px solid #ff3b30; border-radius: 4px; padding: 4px 8px; margin-bottom: 8px;">
+<div style="background-color: rgba(255, 59, 48, 0.15); border: 1px solid #ff3b30; border-radius: 4px; padding: 4px 8px; margin-bottom: 12px;">
     <marquee behavior="scroll" direction="left" scrollamount="7" style="color: #ffffff; font-weight: bold; font-size: 0.82rem; display: flex; align-items: center;">
         <span style="background-color: #ff3b30; color: #ffffff; padding: 2px 6px; border-radius: 3px; margin-right: 10px; font-size: 0.68rem; font-weight: 900;">HIGH IMPACT</span>
         {texte_alerte}
@@ -74,135 +75,55 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# MARKET DATA STREAMING TEMPS RÉEL (TRADINGVIEW TICKER TAPE)
+# GEMINI IA (gemini-3.6-flash)
 # ---------------------------------------------------------
-ticker_tape_html = """
-<div class="tradingview-widget-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-  {
-  "symbols": [
-    { "proName": "FOREXCOM:SPXUSD", "title": "S&P 500" },
-    { "proName": "FOREXCOM:NSXUSD", "title": "US 100" },
-    { "proName": "FX_IDC:EURUSD", "title": "EUR/USD" },
-    { "proName": "BITSTAMP:BTCUSD", "title": "Bitcoin" },
-    { "proName": "OANDA:XAUUSD", "title": "Gold" },
-    { "proName": "TVC:US10Y", "title": "US 10Y" },
-    { "proName": "TVC:VIX", "title": "VIX" }
-  ],
-  "showSymbolLogo": true,
-  "isTransparent": true,
-  "displayMode": "adaptive",
-  "colorTheme": "dark",
-  "locale": "fr"
-}
-  </script>
-</div>
-"""
-components.html(ticker_tape_html, height=50)
-
-st.divider()
+def query_gemini(prompt):
+    if "GEMINI_API_KEY" not in st.secrets:
+        return "Clé API Gemini non configurée."
+    try:
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+        res = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        return res.text
+    except Exception as e:
+        return f"Erreur IA : {e}"
 
 # ---------------------------------------------------------
-# LAYOUT PRINCIPAL (3 COLONNES)
+# LAYOUT PRINCIPAL (STRUCTURE 2 COLONNES)
 # ---------------------------------------------------------
-c_left, c_center, c_right = st.columns([1.1, 1.3, 1.1])
+col_main, col_side = st.columns([2.2, 1])
 
-# --- COLONNE GAUCHE : WATCHLIST TRADINGVIEW LIVE ---
-with c_left:
-    st.subheader("📊 MARCHÉS & ACTIONS LIVE")
-    market_overview_html = """
-    <div class="tradingview-widget-container" style="height: 520px;">
-      <div class="tradingview-widget-container__widget" style="height: 520px;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-      {
-      "colorTheme": "dark",
-      "dateRange": "1D",
-      "showChart": false,
-      "locale": "fr",
-      "largeChartUrl": "",
-      "isTransparent": true,
-      "showSymbolLogo": true,
-      "width": "100%",
-      "height": "520",
-      "tabs": [
-        {
-          "title": "Top Tech",
-          "symbols": [
-            {"s": "NASDAQ:NVDA", "d": "NVIDIA"},
-            {"s": "NASDAQ:AAPL", "d": "Apple"},
-            {"s": "NASDAQ:MSFT", "d": "Microsoft"},
-            {"s": "NASDAQ:TSLA", "d": "Tesla"},
-            {"s": "NASDAQ:AMD", "d": "AMD"}
-          ]
-        },
-        {
-          "title": "Indices",
-          "symbols": [
-            {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"},
-            {"s": "FOREXCOM:NSXUSD", "d": "Nasdaq 100"},
-            {"s": "INDEX:BTCUSD", "d": "Bitcoin"}
-          ]
-        }
-      ]
-    }
-      </script>
-    </div>
-    """
-    components.html(market_overview_html, height=525)
+# --- COLONNE PRINCIPALE : FINVIZ HEATMAP ---
+with col_main:
+    st.subheader("🔥 FINVIZ S&P 500 MAP")
+    
+    # Intégration directe de la Heatmap Finviz
+    finviz_url = "https://finviz.com/map.ashx?t=sec"
+    components.iframe(finviz_url, height=650, scrolling=True)
 
-# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW ---
-with c_center:
+# --- COLONNE SECONDAIRE : MACRO, CALENDRIER & IA ---
+with col_side:
     st.subheader("🔴 CALENDRIER ÉCONOMIQUE")
     tv_widget = """
-    <div class="tradingview-widget-container" style="width: 100%; height: 520px;">
-      <div class="tradingview-widget-container__widget" style="width: 100%; height: 520px;"></div>
+    <div class="tradingview-widget-container" style="width: 100%; height: 320px;">
+      <div class="tradingview-widget-container__widget" style="width: 100%; height: 320px;"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
       {
       "colorTheme": "dark",
       "isTransparent": true,
       "width": "100%",
-      "height": "520",
+      "height": "320",
       "locale": "fr",
       "importanceFilter": "0,1",
-      "currencyFilter": "USD,EUR,GBP,JPY,CAD,AUD,CHF"
+      "currencyFilter": "USD,EUR,GBP"
     }
       </script>
     </div>
     """
-    components.html(tv_widget, height=525)
+    components.html(tv_widget, height=325)
 
-# --- COLONNE DROITE : IA & MACRO ---
-with c_right:
-    st.subheader("🌐 MACRO & FOREX LIVE")
-    forex_cross_html = """
-    <div class="tradingview-widget-container" style="height: 300px;">
-      <div class="tradingview-widget-container__widget" style="height: 300px;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-forex-cross-rates.js" async>
-      {
-      "width": "100%",
-      "height": "300",
-      "currencies": ["EUR", "USD", "JPY", "GBP", "CHF"],
-      "isTransparent": true,
-      "colorTheme": "dark",
-      "locale": "fr"
-    }
-      </script>
-    </div>
-    """
-    components.html(forex_cross_html, height=305)
+    st.divider()
 
-    st.subheader("💬 Prompt IA Macro")
-    def query_gemini(prompt):
-        if "GEMINI_API_KEY" not in st.secrets:
-            return "Clé API Gemini non configurée."
-        try:
-            client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-            res = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
-            return res.text
-        except Exception as e:
-            return f"Erreur IA : {e}"
-
+    st.subheader("💬 PROMPT IA MACRO")
     user_q = st.text_input("Question :", placeholder="Ex : Impact NFP ?", label_visibility="collapsed")
     if user_q:
         with st.spinner("Analyse..."):
