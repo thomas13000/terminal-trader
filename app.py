@@ -19,7 +19,8 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    .block-container { padding-top: 0.6rem !important; padding-bottom: 0.8rem !important; }
+    /* Marge haute augmentée pour éviter le chevauchement avec la barre Streamlit */
+    .block-container { padding-top: 2.5rem !important; padding-bottom: 0.8rem !important; }
     .stApp { background-color: #0c0f12; color: #d1d4dc; }
     
     h2, h3 { font-size: 0.85rem !important; font-weight: 600 !important; margin-top: 4px !important; margin-bottom: 4px !important; color: #848e9c !important; }
@@ -112,7 +113,7 @@ st.markdown("""
 # ---------------------------------------------------------
 header_html = """
 <style>
-    body { margin: 0; background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { margin: 0; padding: 2px; background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
     .header-box {
         display: flex;
         justify-content: space-between;
@@ -124,7 +125,7 @@ header_html = """
         box-sizing: border-box;
     }
     .header-title {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 900;
         color: #f0b90b;
         margin: 0;
@@ -133,10 +134,10 @@ header_html = """
     .clock-card {
         text-align: center;
         background-color: #171b21;
-        padding: 5px 12px;
+        padding: 4px 12px;
         border-radius: 4px;
         border: 1px solid #2a2e39;
-        min-width: 100px;
+        min-width: 95px;
     }
     .clock-label {
         font-size: 0.65rem;
@@ -145,7 +146,7 @@ header_html = """
         letter-spacing: 0.5px;
     }
     .clock-time {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         color: #00ff88;
         font-weight: bold;
         font-family: 'Courier New', monospace;
@@ -180,7 +181,7 @@ header_html = """
 </script>
 """
 
-components.html(header_html, height=72)
+components.html(header_html, height=80)
 
 # ---------------------------------------------------------
 # RÉCUPÉRATION DU FLUX JSON OFFICIEL FOREX FACTORY
