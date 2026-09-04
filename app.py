@@ -175,9 +175,9 @@ news_feed = fetch_yf_news()
 # ---------------------------------------------------------
 c_left, c_center, c_right = st.columns([1.5, 1.2, 1])
 
-# --- COLONNE GAUCHE : HEATMAP S&P 500 ---
+# --- COLONNE GAUCHE : HEATMAP NASDAQ ---
 with c_left:
-    st.subheader("🔥 HEATMAP S&P 500 (PAR SECTEURS)")
+    st.subheader("🔥 HEATMAP NASDAQ (PAR SECTEURS)")
     
     heatmap_html = """
     <div class="tradingview-widget-container" style="height: 580px; width: 100%;">
@@ -185,7 +185,7 @@ with c_left:
       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
       {
         "exchanges": [],
-        "dataSource": "SPX500",
+        "dataSource": "NASDAQ100",
         "grouping": "sector",
         "blockSize": "market_cap_basic",
         "blockColor": "change",
@@ -281,4 +281,3 @@ with c_right:
     if user_q:
         with st.spinner("Analyse..."):
             st.info(query_gemini(f"Expert macro trading, réponds très court : {user_q}"))
-            
