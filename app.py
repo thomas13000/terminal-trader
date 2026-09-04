@@ -75,23 +75,15 @@ st.divider()
 # ---------------------------------------------------------
 # FONCTION IA GEMINI
 # ---------------------------------------------------------
-def analyze_news_with_gemini(headline):
+def query_gemini(prompt_text):
     if "GEMINI_API_KEY" not in st.secrets:
         return "Clé API Gemini introuvable dans les secrets Streamlit."
     
     try:
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-        prompt = f"""
-        Tu es un analyste financier senior.
-        Analyse ce titre d'actualité : "{headline}"
-        
-        Réponds strictly sous ce format :
-        IMPACT: [HAUSSIER ou BAISSIER ou NEUTRE]
-        RESUME: [Résumé en 8 mots maximum en français]
-        """
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=prompt
+            contents=prompt_text
         )
         return response.text
     except Exception as e:
@@ -166,10 +158,59 @@ with col_center:
             with st.expander(f"📌 {headline[:55]}..."):
                 st.write(f"**Titre :** {headline}")
                 with st.spinner("Analyse Gemini..."):
-                    ai_analysis = analyze_news_with_gemini(headline)
+                    prompt = f"""
+                    Tu es un analyste financier senior.
+                    Analyse ce titre : "{headline}"
+                    Format strict (3 lignes maxi) :
+                    IMPACT: [HAUSSIER ou BAISSIER ou NEUTRE]
+                    RESUME: [Résumé en 8 mots maxi en français]
+                    """
+                    ai_analysis = query_gemini(prompt)
                     st.markdown(f"```text\n{ai_analysis}\n```")
 
-# --- COLONNE DROITE : MACRO & CALENDRIER ---
+# --- COLONNE DROITE : MACRO & PROMPT IA ---
 with col_right:
     st.subheader("🌐 Macro & Taux US")
-    st.info("⚙️ Prochaine étape : Taux US 10 ans & Calendrier Éco")
+    
+    @st.cache_data(ttl=300)
+    def fetch_macro_indicators():
+        macro_tickers = {
+            "US 10Y Yield": "^TNX",
+            "Pétrole WTI": "CL=F",
+            "EUR / USD": "EURUSD=X"
+        }
+        data = {}
+        for name, ticker in macro_tickers.items():
+            try:
+                df = yf.Ticker(ticker).history(period="2d")
+                if len(df) >= 2:
+                    curr, prev = df['Close'].iloc[-1], df['Close'].iloc[-2]
+                    chg = ((curr - prev) / prev) * 100
+                    data[name] = (curr, chg)
+            except Exception:
+                pass
+        return data
+
+    macro_data = fetch_macro_indicators()
+    if macro_data:
+        m_cols = st.columns(len(macro_data))
+        for i, (name, (val, chg)) in enumerate(macro_data.items()):
+            with m_cols[i]:
+                color = "#00ff88" if chg >= 0 else "#ff4d4d"
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">{name}</div>
+                    <div class="metric-value">{val:,.2f}</div>
+                    <div style="color:{color}; font-size:0.75rem;">{chg:+.2f}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+    st.divider()
+    
+    # Ligne de commande IA
+    st.subheader("💬 Prompt IA Terminal")
+    user_query = st.text_input("Pose une question macro à Gemini :", placeholder="Ex: Impact taux 10 ans sur la tech...")
+    if user_query:
+        with st.spinner("Analyse en cours..."):
+            response = query_gemini(f"En tant qu'expert en macroéconomie, réponds de façon synthétique : {user_query}")
+            st.info(response)
