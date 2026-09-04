@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import yfinance as yf
 from google import genai
 import pandas as pd
@@ -107,36 +108,79 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# EN-TÊTE : TITRE PLUS GRAS & HORLOGES PARIS / NEW YORK
+# EN-TÊTE : TITRE + HORLOGES TEMPS RÉEL (JS FLUIDE)
 # ---------------------------------------------------------
-try:
-    paris_tz = zoneinfo.ZoneInfo("Europe/Paris")
-    ny_tz = zoneinfo.ZoneInfo("America/New_York")
-    paris_time = datetime.now(paris_tz).strftime("%H:%M:%S")
-    ny_time = datetime.now(ny_tz).strftime("%H:%M:%S")
-except Exception:
-    paris_time = datetime.now().strftime("%H:%M:%S")
-    ny_time = datetime.now().strftime("%H:%M:%S")
+header_html = """
+<style>
+    body { margin: 0; background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .header-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #12161c;
+        padding: 8px 16px;
+        border: 1px solid #2a2e39;
+        border-radius: 6px;
+        box-sizing: border-box;
+    }
+    .header-title {
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: #f0b90b;
+        margin: 0;
+        letter-spacing: 0.5px;
+    }
+    .clock-card {
+        text-align: center;
+        background-color: #171b21;
+        padding: 5px 12px;
+        border-radius: 4px;
+        border: 1px solid #2a2e39;
+        min-width: 100px;
+    }
+    .clock-label {
+        font-size: 0.65rem;
+        color: #848e9c;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+    .clock-time {
+        font-size: 1.15rem;
+        color: #00ff88;
+        font-weight: bold;
+        font-family: 'Courier New', monospace;
+    }
+</style>
 
-st.markdown(f"""
-<div style="display: flex; justify-content: space-between; align-items: center; background-color: #12161c; padding: 10px 16px; border: 1px solid #2a2e39; border-radius: 6px; margin-bottom: 12px;">
-    <div>
-        <h1 style="font-size: 1.6rem !important; font-weight: 900 !important; color: #f0b90b !important; margin: 0 !important; letter-spacing: 0.5px;">
-            ⚡ TERMINAL TRADER PRO — FOREX FACTORY
-        </h1>
-    </div>
-    <div style="display: flex; gap: 14px;">
-        <div style="text-align: center; background-color: #171b21; padding: 6px 14px; border-radius: 4px; border: 1px solid #2a2e39; min-width: 95px;">
-            <div style="font-size: 0.65rem; color: #848e9c; font-weight: bold; letter-spacing: 0.5px;">PARIS</div>
-            <div style="font-size: 1.15rem; color: #00ff88; font-weight: bold; font-family: 'Courier New', monospace;">{paris_time}</div>
+<div class="header-box">
+    <div class="header-title">⚡ TERMINAL TRADER PRO</div>
+    <div style="display: flex; gap: 12px;">
+        <div class="clock-card">
+            <div class="clock-label">PARIS</div>
+            <div id="clock-paris" class="clock-time">--:--:--</div>
         </div>
-        <div style="text-align: center; background-color: #171b21; padding: 6px 14px; border-radius: 4px; border: 1px solid #2a2e39; min-width: 95px;">
-            <div style="font-size: 0.65rem; color: #848e9c; font-weight: bold; letter-spacing: 0.5px;">NEW YORK</div>
-            <div style="font-size: 1.15rem; color: #00ff88; font-weight: bold; font-family: 'Courier New', monospace;">{ny_time}</div>
+        <div class="clock-card">
+            <div class="clock-label">NEW YORK</div>
+            <div id="clock-ny" class="clock-time">--:--:--</div>
         </div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+
+<script>
+    function updateClocks() {
+        const now = new Date();
+        const parisOptions = { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+        const nyOptions = { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+        
+        document.getElementById('clock-paris').textContent = new Intl.DateTimeFormat('fr-FR', parisOptions).format(now);
+        document.getElementById('clock-ny').textContent = new Intl.DateTimeFormat('en-US', nyOptions).format(now);
+    }
+    setInterval(updateClocks, 1000);
+    updateClocks();
+</script>
+"""
+
+components.html(header_html, height=72)
 
 # ---------------------------------------------------------
 # RÉCUPÉRATION DU FLUX JSON OFFICIEL FOREX FACTORY
