@@ -4,13 +4,18 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. CONFIGURATION STREAMLIT
+# 1. CONFIGURATION DE LA PAGE STREAMLIT
 # ---------------------------------------------------------
-st.set_page_config(page_title="TERMINAL TRADER PRO", page_icon="⚡", layout="wide")
+st.set_page_config(
+    page_title="TERMINAL TRADER PRO",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 
 # ---------------------------------------------------------
-# 2. CHARGEMENT AUDIO EN BASE64
+# 2. CHARGEMENT AUTOMATIQUE DE LA MUSIQUE (acdc.mp3)
 # ---------------------------------------------------------
 def load_audio_b64(filename="acdc.mp3"):
     if os.path.exists(filename):
@@ -23,7 +28,7 @@ audio_b64 = load_audio_b64("acdc.mp3")
 
 
 # ---------------------------------------------------------
-# 3. OVERLAY 3D & LECTURE AUDIO (10s -> 35s avec Fade)
+# 3. COMPOSANT ECRAN D'ACCUEIL 3D + GESTION AUDIO CONTINU
 # ---------------------------------------------------------
 def render_welcome_screen(audio_data):
     audio_src = f"data:audio/mp3;base64,{audio_data}" if audio_data else ""
@@ -37,19 +42,19 @@ def render_welcome_screen(audio_data):
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; user-select: none; }}
-            body, html {{ width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: #05070a; }}
+            body, html {{ width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: transparent; }}
             
             #welcome-screen-root {{
                 position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
                 background: radial-gradient(circle at center, #0e131f 0%, #030406 100%);
                 z-index: 99999999; display: flex; align-items: center; justify-content: space-between;
-                padding: 0 4vw; cursor: pointer;
+                padding: 0 4vw; cursor: pointer; transition: opacity 0.6s ease;
             }}
             #canvas-3d {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }}
             
             .left-panel {{
                 position: relative; z-index: 2; text-align: center;
-                background: rgba(13, 17, 26, 0.82); border: 1px solid rgba(240, 185, 11, 0.35);
+                background: rgba(13, 17, 26, 0.85); border: 1px solid rgba(240, 185, 11, 0.35);
                 padding: 35px; border-radius: 20px; backdrop-filter: blur(18px);
                 box-shadow: 0 0 70px rgba(0, 0, 0, 0.9); width: 380px;
             }}
@@ -96,7 +101,7 @@ def render_welcome_screen(audio_data):
             <div class="clock-main" id="clock-display">00:00:00</div>
             <div class="clock-sub">HEURE DE PARIS — MARKET STANDBY</div>
             <button class="btn-enter" onclick="enterTerminalWithAudio()">ENTRER DANS LE TERMINAL ➔</button>
-            <div class="hint-bottom">Cliquez pour activer la session audio</div>
+            <div class="hint-bottom">Cliquez n'importe où pour lancer l'expérience</div>
         </div>
 
         <div class="side-panel" onclick="event.stopPropagation()">
@@ -125,25 +130,24 @@ def render_welcome_screen(audio_data):
     <script>
         const audioDataUri = "{audio_src}";
         
-        // --- TIMING MUSICAL DESIRÉ ---
-        const startSecond = 10; // Début à 10s
-        const endSecond   = 35; // Fin à 35s
-        const fadeSec     = 2.5; // Durée du fondu (2.5s)
+        // ⏱️ RÉGLAGES EXTRAIT AUDIO
+        const startSecond = 10; // Démarre à 10s
+        const endSecond   = 35; // Termine à 35s
+        const fadeSec     = 2.5; // Fondu sur 2.5s
 
         function enterTerminalWithAudio() {{
+            // 1. Lancer la musique
             if (audioDataUri) {{
                 try {{
                     const audio = new Audio(audioDataUri);
-                    audio.volume = 0.85; // Volume initial
-                    audio.currentTime = startSecond; // Saut direct à la 10ème seconde
-                    audio.play().catch(e => console.log("Erreur lecture audio:", e));
+                    audio.volume = 0.85;
+                    audio.currentTime = startSecond;
+                    audio.play().catch(e => console.log("Info audio:", e));
 
-                    // Durée totale de lecture (25 secondes)
+                    // Gestion du Fondu Sonore
                     const totalPlayMs = (endSecond - startSecond) * 1000;
-                    // Moment où démarre le fondu (ex: à 22.5s de lecture = 32.5s dans la chanson)
                     const fadeStartMs = totalPlayMs - (fadeSec * 1000);
 
-                    // Déclenchement du Fade Out
                     setTimeout(() => {{
                         const intervalMs = 50;
                         const steps = (fadeSec * 1000) / intervalMs;
@@ -164,16 +168,23 @@ def render_welcome_screen(audio_data):
                     console.log("Erreur audio:", e);
                 }}
             }}
+
+            // 2. Faire disparaître l'overlay visuel tout en gardant l'audio actif
             dismissOverlay();
         }}
 
         function dismissOverlay() {{
             const root = document.getElementById('welcome-screen-root');
-            if (root) root.style.display = 'none';
+            if (root) {{
+                root.style.opacity = '0';
+                root.style.pointerEvents = 'none'; // Permet de cliquer à travers vers Streamlit
+            }}
             try {{
                 const iframes = window.parent.document.querySelectorAll('iframe');
                 iframes.forEach(iframe => {{
-                    if (iframe.contentWindow === window) iframe.style.display = 'none';
+                    if (iframe.contentWindow === window) {{
+                        iframe.style.pointerEvents = 'none'; // Rend l'iframe transparente aux clics souris
+                    }}
                 }});
             }} catch(e) {{}}
         }}
@@ -183,8 +194,13 @@ def render_welcome_screen(audio_data):
                 const iframes = window.parent.document.querySelectorAll('iframe');
                 iframes.forEach(iframe => {{
                     if (iframe.contentWindow === window) {{
-                        iframe.style.position = 'fixed'; iframe.style.top = '0'; iframe.style.left = '0';
-                        iframe.style.width = '100vw'; iframe.style.height = '100vh'; iframe.style.zIndex = '99999999'; iframe.style.border = 'none';
+                        iframe.style.position = 'fixed'; 
+                        iframe.style.top = '0'; 
+                        iframe.style.left = '0';
+                        iframe.style.width = '100vw'; 
+                        iframe.style.height = '100vh'; 
+                        iframe.style.zIndex = '99999999'; 
+                        iframe.style.border = 'none';
                     }}
                 }});
             }} catch(e) {{}}
@@ -258,14 +274,29 @@ def render_welcome_screen(audio_data):
     components.html(html_code, height=0)
 
 
+# Lancement de l'écran d'accueil 3D
 render_welcome_screen(audio_b64)
 
+
 # ---------------------------------------------------------
-# 4. INTERFACE DU TERMINAL DE TRADING
+# 4. TA PAGE D'ACCUEIL / DASHBOARD HABITUEL
+# (Colle ton code de page d'accueil Streamlit ci-dessous !)
 # ---------------------------------------------------------
-st.markdown(
-    """<style>.stApp { background-color: #090a0f; color: #e1e3ea; }</style>""",
-    unsafe_allow_html=True,
+
+st.title("⚡ TERMINAL TRADER PRO")
+
+# Exemples d'onglets ou de ton tableau de bord habituel :
+tab1, tab2, tab3 = st.tabs(
+    ["📊 Analyse Technique", "📰 Actualités & Macro", "⚙️ Configuration"]
 )
-st.title("⚡ TERMINAL TRADER PRO CONNECTÉ")
-st.success("Session Iron Man active avec l'extrait musical AC/DC (10s ➔ 35s) !")
+
+with tab1:
+    st.subheader("Graphiques & Indices")
+    st.write("Bienvenue sur ton terminal principal.")
+    # Mets ici tes graphiques, widgets, etc.
+
+with tab2:
+    st.subheader("Flux d'actualités")
+
+with tab3:
+    st.subheader("Réglages de ton compte")
