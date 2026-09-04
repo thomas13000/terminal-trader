@@ -3,7 +3,6 @@ import streamlit.components.v1 as components
 import yfinance as yf
 from google import genai
 import pandas as pd
-import plotly.express as px
 
 # ---------------------------------------------------------
 # CONFIGURATION PAGE & STYLE BLOOMBERG
@@ -172,17 +171,40 @@ def fetch_yf_news():
 news_feed = fetch_yf_news()
 
 # ---------------------------------------------------------
-# LAYOUT PRINCIPAL (3 COLONNES AVEC FINVIZ HEATMAP)
+# LAYOUT PRINCIPAL (3 COLONNES)
 # ---------------------------------------------------------
 c_left, c_center, c_right = st.columns([1.5, 1.2, 1])
 
-# --- COLONNE GAUCHE : FINVIZ HEATMAP S&P 500 ---
+# --- COLONNE GAUCHE : HEATMAP S&P 500 ---
 with c_left:
-    st.subheader("🔥 FINVIZ HEATMAP (MIS À JOUR / 15 MIN)")
-    finviz_map_url = "https://finviz.com/map.ashx?t=sec"
-    components.iframe(finviz_map_url, height=580, scrolling=True)
+    st.subheader("🔥 HEATMAP S&P 500 (PAR SECTEURS)")
+    
+    heatmap_html = """
+    <div class="tradingview-widget-container" style="height: 580px; width: 100%;">
+      <div class="tradingview-widget-container__widget" style="height: 580px; width: 100%;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+      {
+        "exchanges": [],
+        "dataSource": "SPX500",
+        "grouping": "sector",
+        "blockSize": "market_cap_basic",
+        "blockColor": "change",
+        "locale": "fr",
+        "symbolUrl": "",
+        "colorTheme": "dark",
+        "hasTopBar": false,
+        "isDataSetEnabled": false,
+        "isZoomEnabled": true,
+        "hasSymbolTooltip": true,
+        "width": "100%",
+        "height": "580"
+      }
+      </script>
+    </div>
+    """
+    components.html(heatmap_html, height=585)
 
-# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW + NEWS ---
+# --- COLONNE CENTRALE : CALENDRIER + NEWS ---
 with c_center:
     st.subheader("🔴 CALENDRIER ÉCONOMIQUE")
     
@@ -259,3 +281,4 @@ with c_right:
     if user_q:
         with st.spinner("Analyse..."):
             st.info(query_gemini(f"Expert macro trading, réponds très court : {user_q}"))
+            
