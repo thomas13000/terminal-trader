@@ -90,34 +90,75 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1>⚡ TERMINAL TRADER PRO — FINANCIALJUICE EDITION</h1>", unsafe_allow_html=True)
+st.markdown("<h1>⚡ TERMINAL TRADER PRO — PURE FINANCIALJUICE SQUAWK</h1>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# FLUX TRADING PURES (FOREXLIVE + MARKETWATCH MARKETS + CNBC MARKETS)
+# FLUX TRADING 100% PURS (DAILYFX + FOREXLIVE + GOOGLE MACRO)
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def fetch_pure_trading_news():
     urls = [
-        "https://www.forexlive.com/feed/news",
-        "https://search.cnbc.com/rs/search/combinedrender?source=cnbcnews&titles=true&group=scenic&id=15839069&trending=true&output=rss",
-        "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+        "https://www.dailyfx.com/feeds/market-news",
+        "https://www.forexlive.com/feed",
+        "https://news.google.com/rss/search?q=FED+OR+ECB+OR+inflation+OR+S%26P500+OR+Forex+when:1d&hl=en-US&gl=US&ceid=US:en"
     ]
     
-    # Mots-clés à bannir pour éliminer le bruit (Personal Finance, Lifestyle, etc.)
-    noise_keywords = ["WILL", "GRANDSON", "DIED", "LEGGINGS", "RETIREMENT", "MARRIAGE", "DIVORCE", "HERITAGE", "HOUSE", "MORTGAGE RATE TAX"]
+    # Mots banni à 100% (Vie quotidienne, héritage, personal finance)
+    banned_words = [
+        "GRANDSON", "WILL", "DIED", "LEGGINGS", "RETIREMENT", "MARRIAGE", "FAMILY", 
+        "HUSBAND", "WIFE", "MORTGAGE", "HOUSE", "DOG", "CAT", "PANTS", "NEPHEW", "HERITAGE",
+        "INHERIT", "SON", "DAUGHTER", "KID", "CHILD", "RELATIONSHIP", "MONEYIST", "PAY CHECK"
+    ]
+    
+    # Mots-clés requis pour la Macro / Trading
+    macro_keywords = [
+        "FED", "ECB", "BOJ", "BOE", "INFLATION", "CPI", "PPI", "RATE", "CUT", "HIKE", 
+        "POWELL", "LAGARDE", "YIELD", "BOND", "TREASURY", "DOLLAR", "EUR", "USD", "JPY", 
+        "GBP", "GOLD", "OIL", "CRUDE", "STOCK", "S&P", "NASDAQ", "DOW", "EARNINGS", 
+        "REVENUE", "PROFIT", "SEC", "CENTRAL BANK", "ECONOMY", "JOBS", "NFP", "UNEMPLOYMENT",
+        "MARKET", "RALLY", "SLUMP", "FUTURES", "SURGE", "PLUNGE", "TARIFF", "TRADE", "FX"
+    ]
     
     clean_news = []
+    seen_titles = set()
+    
     for url in urls:
         try:
             feed = feedparser.parse(url)
             for entry in feed.entries:
-                title_upper = entry.title.upper()
-                # On filtre le bruit
-                if not any(bad_word in title_upper for bad_word in noise_keywords):
+                t = entry.title
+                t_upper = t.upper()
+                
+                # Déduplication et filtrage anti-bruit
+                if t in seen_titles:
+                    continue
+                if any(bad in t_upper for bad in banned_words):
+                    continue
+                    
+                # Vérification de pertinence macro/trading
+                if "dailyfx" in url or "forexlive" in url or any(good in t_upper for good in macro_keywords):
                     clean_news.append(entry)
+                    seen_titles.add(t)
         except Exception:
             pass
             
+    # Secours via Yahoo Finance API si le flux RSS est restreint
+    if len(clean_news) < 5:
+        try:
+            spy = yf.Ticker("^GSPC")
+            if hasattr(spy, 'news') and spy.news:
+                for item in spy.news:
+                    title = item.get('title', '')
+                    if title and title not in seen_titles and not any(bad in title.upper() for bad in banned_words):
+                        class DummyEntry:
+                            def __init__(self, t):
+                                self.title = t
+                                self.published_parsed = None
+                        clean_news.append(DummyEntry(title))
+                        seen_titles.add(title)
+        except Exception:
+            pass
+
     return clean_news
 
 all_news = fetch_pure_trading_news()
@@ -226,7 +267,7 @@ with col_left:
     })
     st.dataframe(movers_data, hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : PURE FINANCIALJUICE ---
+# --- COLONNE CENTRALE : PURE FINANCIALJUICE SQUAWK & FEED ---
 with col_center:
     st.subheader("🔴 FINANCIALJUICE — REAL-TIME SQUAWK & FEED")
     
@@ -258,7 +299,6 @@ with col_center:
             if hasattr(item, 'published_parsed') and item.published_parsed:
                 time_str = f"{item.published_parsed.tm_hour:02d}:{item.published_parsed.tm_min:02d}"
             
-            # Détection intelligente des catégories FinancialJuice
             t_upper = title.upper()
             if any(k in t_upper for k in ["FED", "CPI", "INFLATION", "POWELL", "ECB", "RATE", "BOJ", "JOBS", "NFP"]):
                 badge_tag = "MACRO/CENTRAL BANK"
@@ -328,4 +368,3 @@ with col_right:
     if user_query:
         with st.spinner("Analyse..."):
             st.info(query_gemini(f"Expert macro, réponds court : {user_query}"))
-            
