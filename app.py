@@ -98,18 +98,48 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# BANDEAU MARKET DATA (RAFRAÎCHISSEMENT 15 MIN)
+# GENERATION DE GRAPHICAL SPARKLINE (SVG 1 MIN)
 # ---------------------------------------------------------
-@st.cache_data(ttl=900)
+def generate_sparkline(series, width=120, height=32, color="#00ff88"):
+    values = series.dropna().tolist()
+    if len(values) < 2:
+        return ""
+    
+    # Échantillonnage léger pour garder le HTML fluide
+    if len(values) > 120:
+        step = len(values) // 120
+        values = values[::step]
+        
+    min_val, max_val = min(values), max(values)
+    val_range = max_val - min_val if max_val != min_val else 1
+    
+    points = []
+    n = len(values)
+    for i, val in enumerate(values):
+        x = (i / (n - 1)) * width
+        y = height - ((val - min_val) / val_range) * (height - 6) - 3
+        points.append(f"{x:.1f},{y:.1f}")
+    
+    polyline = " ".join(points)
+    return f'''<svg width="100%" height="{height}" viewBox="0 0 {width} {height}" preserveAspectRatio="none" style="margin-top: 4px;">
+        <polyline fill="none" stroke="{color}" stroke-width="1.8" points="{polyline}"/>
+    </svg>'''
+
+# ---------------------------------------------------------
+# BANDEAU MARKET DATA 1M (RAFRAÎCHISSEMENT 60S)
+# ---------------------------------------------------------
+@st.cache_data(ttl=60)
 def fetch_market_data():
     tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "DXY": "DX-Y.NYB", "GOLD": "GC=F", "VIX": "^VIX"}
     data = {}
     for name, ticker in tickers.items():
         try:
-            df = yf.Ticker(ticker).history(period="2d")
-            if len(df) >= 2:
-                curr, prev = df['Close'].iloc[-1], df['Close'].iloc[-2]
-                data[name] = (curr, ((curr - prev) / prev) * 100)
+            df = yf.Ticker(ticker).history(period="1d", interval="1m")
+            if not df.empty and len(df) >= 2:
+                curr = df['Close'].iloc[-1]
+                first = df['Close'].iloc[0]
+                pct = ((curr - first) / first) * 100
+                data[name] = (curr, pct, df['Close'])
         except Exception:
             pass
     return data
@@ -117,14 +147,16 @@ def fetch_market_data():
 mkt = fetch_market_data()
 if mkt:
     cols = st.columns(len(mkt))
-    for i, (k, (v, c)) in enumerate(mkt.items()):
+    for i, (k, (v, c, series)) in enumerate(mkt.items()):
         with cols[i]:
             col = "#00ff88" if c >= 0 else "#ff3b30"
+            sparkline = generate_sparkline(series, color=col)
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-title">{k}</div>
                 <div class="metric-value" style="color:{col};">{v:,.2f}</div>
-                <div style="color:{col}; font-size:0.7rem;">{c:+.2f}%</div>
+                <div style="color:{col}; font-size:0.7rem;">{c:+.2f}% (1m)</div>
+                {sparkline}
             </div>
             """, unsafe_allow_html=True)
 
