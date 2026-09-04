@@ -11,17 +11,16 @@ import zoneinfo
 # CONFIGURATION & STYLE BLOOMBERG / FOREX FACTORY
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Terminal Trader Pro — Forex Factory",
+    page_title="TERMINAL TRADER PRO",
     page_icon="⚡",
     layout="wide"
 )
 
 st.markdown("""
 <style>
-    .block-container { padding-top: 0.8rem !important; padding-bottom: 0.8rem !important; }
+    .block-container { padding-top: 0.6rem !important; padding-bottom: 0.8rem !important; }
     .stApp { background-color: #0c0f12; color: #d1d4dc; }
     
-    h1 { font-size: 1.1rem !important; font-weight: 700 !important; color: #f0b90b !important; margin: 0 !important; }
     h2, h3 { font-size: 0.85rem !important; font-weight: 600 !important; margin-top: 4px !important; margin-bottom: 4px !important; color: #848e9c !important; }
     
     .metric-card {
@@ -107,7 +106,37 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1>⚡ TERMINAL TRADER PRO — FOREX FACTORY RED CALENDAR</h1>", unsafe_allow_html=True)
+# ---------------------------------------------------------
+# EN-TÊTE : TITRE PLUS GRAS & HORLOGES PARIS / NEW YORK
+# ---------------------------------------------------------
+try:
+    paris_tz = zoneinfo.ZoneInfo("Europe/Paris")
+    ny_tz = zoneinfo.ZoneInfo("America/New_York")
+    paris_time = datetime.now(paris_tz).strftime("%H:%M:%S")
+    ny_time = datetime.now(ny_tz).strftime("%H:%M:%S")
+except Exception:
+    paris_time = datetime.now().strftime("%H:%M:%S")
+    ny_time = datetime.now().strftime("%H:%M:%S")
+
+st.markdown(f"""
+<div style="display: flex; justify-content: space-between; align-items: center; background-color: #12161c; padding: 10px 16px; border: 1px solid #2a2e39; border-radius: 6px; margin-bottom: 12px;">
+    <div>
+        <h1 style="font-size: 1.6rem !important; font-weight: 900 !important; color: #f0b90b !important; margin: 0 !important; letter-spacing: 0.5px;">
+            ⚡ TERMINAL TRADER PRO — FOREX FACTORY
+        </h1>
+    </div>
+    <div style="display: flex; gap: 14px;">
+        <div style="text-align: center; background-color: #171b21; padding: 6px 14px; border-radius: 4px; border: 1px solid #2a2e39; min-width: 95px;">
+            <div style="font-size: 0.65rem; color: #848e9c; font-weight: bold; letter-spacing: 0.5px;">PARIS</div>
+            <div style="font-size: 1.15rem; color: #00ff88; font-weight: bold; font-family: 'Courier New', monospace;">{paris_time}</div>
+        </div>
+        <div style="text-align: center; background-color: #171b21; padding: 6px 14px; border-radius: 4px; border: 1px solid #2a2e39; min-width: 95px;">
+            <div style="font-size: 0.65rem; color: #848e9c; font-weight: bold; letter-spacing: 0.5px;">NEW YORK</div>
+            <div style="font-size: 1.15rem; color: #00ff88; font-weight: bold; font-family: 'Courier New', monospace;">{ny_time}</div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # RÉCUPÉRATION DU FLUX JSON OFFICIEL FOREX FACTORY
@@ -121,13 +150,13 @@ def fetch_forex_factory_red_folder():
             events = response.json()
             
             try:
-                paris_tz = zoneinfo.ZoneInfo("Europe/Paris")
-                now_paris = datetime.now(paris_tz)
+                p_tz = zoneinfo.ZoneInfo("Europe/Paris")
+                now_p = datetime.now(p_tz)
             except Exception:
-                paris_tz = None
-                now_paris = datetime.now()
+                p_tz = None
+                now_p = datetime.now()
                 
-            today_date = now_paris.date()
+            today_date = now_p.date()
             tomorrow_date = today_date + timedelta(days=1)
             
             parsed_events = []
@@ -136,8 +165,8 @@ def fetch_forex_factory_red_folder():
                     date_str = item.get("date", "")
                     if date_str:
                         dt = datetime.fromisoformat(date_str)
-                        if paris_tz:
-                            dt_local = dt.astimezone(paris_tz)
+                        if p_tz:
+                            dt_local = dt.astimezone(p_tz)
                         else:
                             dt_local = dt
                             
@@ -167,10 +196,10 @@ ff_events = fetch_forex_factory_red_folder()
 
 top_alert = "AUCUNE ANNONCE ROUGE RESTANTE AUJOURD'HUI OU DEMAIN"
 if ff_events:
-    top_alert = f"PROCHAIN IMPACT ROUGE : [{ff_events[0]['currency']}] {ff_events[0]['title']} à {ff_events[0]['time_str']} — Forecast: {ff_events[0]['forecast']}"
+    top_alert = f"PROCHAIN IMPACT ROUGE : [{ff_events[0]['currency']}] {ff_events[0]['title']} à {ff_events[0]['time_str']} — Prévision : {ff_events[0]['forecast']}"
 
 st.markdown(f"""
-<div style="background-color: #2b0000; border: 1px solid #ff4d4d; border-radius: 4px; padding: 2px 8px; margin-top: 4px; margin-bottom: 8px;">
+<div style="background-color: #2b0000; border: 1px solid #ff4d4d; border-radius: 4px; padding: 2px 8px; margin-top: 2px; margin-bottom: 8px;">
     <marquee behavior="scroll" direction="left" scrollamount="7" style="color: #ff4d4d; font-weight: bold; font-size: 0.78rem;">
         🚨 FOREX FACTORY RED ALERT : {top_alert}
     </marquee>
@@ -300,8 +329,8 @@ with col_center:
                 f'<span class="ff-currency">{ev["currency"]}</span>'
                 f'<span class="ff-title" title="{ev["title"]}">{ev["title"]}</span>'
                 f'<div class="ff-val-box">'
-                f'<span>Prév: <b class="ff-val">{ev["forecast"]}</b></span>'
-                f'<span>Préc: <b class="ff-val">{ev["previous"]}</b></span>'
+                f'<span>Prév : <b class="ff-val">{ev["forecast"]}</b></span>'
+                f'<span>Préc : <b class="ff-val">{ev["previous"]}</b></span>'
                 f'</div>'
                 f'</div>'
             )
@@ -313,12 +342,12 @@ with col_center:
 
     st.divider()
     
-    st.subheader("⚡ Analyse IA du Prochain Événement")
+    st.subheader("⚡ Analyse du Prochain Événement")
     if st.button("🔍 Analyser le risque du prochain événement rouge"):
         if ff_events:
             nxt = ff_events[0]
-            with st.spinner("Analyse par Gemini..."):
-                prompt = f"L'événement économique '{nxt['title']}' sur la devise {nxt['currency']} a lieu à {nxt['time_str']}. Prévision: {nxt['forecast']}, Précédent: {nxt['previous']}. En 2 phrases, explique l'impact attendu si la donnée dépasse la prévision."
+            with st.spinner("Analyse en cours..."):
+                prompt = f"L'événement économique '{nxt['title']}' sur la devise {nxt['currency']} a lieu à {nxt['time_str']}. Prévision : {nxt['forecast']}, Précédent : {nxt['previous']}. En 2 phrases, explique l'impact attendu si la donnée dépasse la prévision."
                 st.info(query_gemini(prompt))
         else:
             st.write("Aucune annonce rouge à analyser.")
@@ -352,8 +381,8 @@ with col_right:
             st.markdown(f"**{name}** : `{val:,.2f}` (<span style='color:{col_c}'>{chg:+.2f}%</span>)", unsafe_allow_html=True)
 
     st.divider()
-    st.subheader("💬 Prompt IA Terminal")
-    user_query = st.text_input("Question Macro :", placeholder="Ex: Impact NFP supérieur aux attentes...", label_visibility="collapsed")
+    st.subheader("💬 Prompt Terminal")
+    user_query = st.text_input("Question Macro :", placeholder="Ex : Impact NFP supérieur aux attentes...", label_visibility="collapsed")
     if user_query:
         with st.spinner("Analyse..."):
             st.info(query_gemini(f"Expert macro trading, réponds très court : {user_query}"))
