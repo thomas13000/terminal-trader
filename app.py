@@ -5,7 +5,7 @@ from google import genai
 import pandas as pd
 
 # ---------------------------------------------------------
-# CONFIGURATION PAGE & STYLE BLOOMBERG
+# CONFIGURATION PAGE & STYLE BLOOMBERG / FONDU GOLD GLOW
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="TERMINAL TRADER PRO",
@@ -39,34 +39,52 @@ st.markdown("""
         overflow-y: auto;
     }
     
-    /* Style personnalisé des Onglets */
+    /* =========================================================
+       STYLE 1 : FONDU & GOLD GLOW (TRADING PRO)
+       ========================================================= */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background-color: #12161c;
-        padding: 4px;
-        border-radius: 6px;
-        border: 1px solid #2a2e39;
+        background: linear-gradient(180deg, rgba(18, 22, 28, 0.9) 0%, rgba(12, 15, 18, 0.3) 100%);
+        padding: 8px 12px 0 12px;
+        border-radius: 10px 10px 0 0;
+        border-bottom: 1px solid #2a2e39;
     }
+
     .stTabs [data-baseweb="tab"] {
-        background-color: #171b21;
-        border-radius: 4px;
-        color: #848e9c;
-        font-weight: 600;
-        padding: 6px 16px;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 6px 6px 0 0 !important;
+        color: #848e9c !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        padding: 8px 20px !important;
+        transition: all 0.25s ease !important;
     }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
     .stTabs [aria-selected="true"] {
-        background-color: #f0b90b !important;
-        color: #0c0f12 !important;
-        font-weight: bold;
+        color: #f0b90b !important;
+        background: linear-gradient(180deg, rgba(240, 185, 11, 0.18) 0%, rgba(240, 185, 11, 0.01) 100%) !important;
+        border-bottom: 2px solid #f0b90b !important;
+        box-shadow: 0px 8px 20px rgba(240, 185, 11, 0.2);
+    }
+
+    .stTabs [data-baseweb="tab-highlight-title"],
+    .stTabs [data-baseweb="tab-border-selected"] {
+        background-color: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Auto-rafraîchissement automatique du navigateur toutes les 15 minutes (900 000 ms)
+# Auto-rafraîchissement automatique du navigateur toutes les 15 minutes
 components.html("<script>setTimeout(function(){ window.location.reload(); }, 900000);</script>", height=0)
 
 # ---------------------------------------------------------
-# HORLOGES TEMPS RÉEL (JS) - PERMANENT EN HAUT
+# HORLOGES TEMPS RÉEL (JS)
 # ---------------------------------------------------------
 header_html = """
 <style>
@@ -105,7 +123,7 @@ header_html = """
 components.html(header_html, height=75)
 
 # ---------------------------------------------------------
-# BANDEAU DÉFILANT D'ALERTE MACRO (PERMANENT)
+# BANDEAU DÉFILANT D'ALERTE MACRO
 # ---------------------------------------------------------
 texte_alerte = "🚨 ALERTE MACRO : Publication NFP & Taux de chômage US à 14:30 — Risque de volatilité extrême sur USD, Or et S&P 500 !"
 
@@ -146,7 +164,7 @@ def generate_sparkline(series, width=120, height=32, color="#00ff88"):
     </svg>'''
 
 # ---------------------------------------------------------
-# BANDEAU MARKET DATA 1M (PERMANENT EN HAUT)
+# BANDEAU MARKET DATA 1M
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def fetch_market_data():
@@ -220,7 +238,7 @@ def fetch_yf_news():
 news_feed = fetch_yf_news()
 
 # ---------------------------------------------------------
-# SYSTEME D'ONGLETS (PAGE PRINCIPALE + 3 ONGLETS VIDES)
+# SYSTEME D'ONGLETS (STYLE 1 : FONDU GOLD GLOW)
 # ---------------------------------------------------------
 tab_main, tab_1, tab_2, tab_3 = st.tabs([
     "⚡ Terminal Pro", 
@@ -343,16 +361,16 @@ with tab_main:
                 st.info(query_gemini(f"Expert macro trading, réponds très court : {user_q}"))
 
 # =========================================================
-# ONGLETS VIDES (À PERSONNALISER)
+# ONGLETS VIDES
 # =========================================================
 with tab_1:
     st.subheader("📌 Onglet 1")
-    st.info("Espace libre : prêt à accueillir tes prochains widgets ou outils.")
+    st.info("Espace disponible pour tes prochains modules.")
 
 with tab_2:
     st.subheader("📌 Onglet 2")
-    st.info("Espace libre : prêt à accueillir tes prochains widgets ou outils.")
+    st.info("Espace disponible pour tes prochains modules.")
 
 with tab_3:
     st.subheader("📌 Onglet 3")
-    st.info("Espace libre : prêt à accueillir tes prochains widgets ou outils.")
+    st.info("Espace disponible pour tes prochains modules.")
