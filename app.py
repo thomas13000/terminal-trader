@@ -16,7 +16,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Design compact & CSS FinancialJuice
 st.markdown("""
 <style>
     .block-container { padding-top: 0.8rem !important; padding-bottom: 0.8rem !important; }
@@ -91,28 +90,37 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# 1. EN-TÊTE & ALERTE ROUGE DEFILANTE
-# ---------------------------------------------------------
 st.markdown("<h1>⚡ TERMINAL TRADER PRO — FINANCIALJUICE EDITION</h1>", unsafe_allow_html=True)
 
-@st.cache_data(ttl=90)
-def fetch_breaking_news():
+# ---------------------------------------------------------
+# FLUX TRADING PURES (FOREXLIVE + MARKETWATCH MARKETS + CNBC MARKETS)
+# ---------------------------------------------------------
+@st.cache_data(ttl=60)
+def fetch_pure_trading_news():
     urls = [
-        "https://search.cnbc.com/rs/search/combinedrender?source=cnbcnews&titles=true&group=scenic&id=10000664&trending=true&output=rss",
+        "https://www.forexlive.com/feed/news",
+        "https://search.cnbc.com/rs/search/combinedrender?source=cnbcnews&titles=true&group=scenic&id=15839069&trending=true&output=rss",
         "https://feeds.content.dowjones.io/public/rss/mw_topstories"
     ]
-    news = []
+    
+    # Mots-clés à bannir pour éliminer le bruit (Personal Finance, Lifestyle, etc.)
+    noise_keywords = ["WILL", "GRANDSON", "DIED", "LEGGINGS", "RETIREMENT", "MARRIAGE", "DIVORCE", "HERITAGE", "HOUSE", "MORTGAGE RATE TAX"]
+    
+    clean_news = []
     for url in urls:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:5]:
-                news.append(entry)
+            for entry in feed.entries:
+                title_upper = entry.title.upper()
+                # On filtre le bruit
+                if not any(bad_word in title_upper for bad_word in noise_keywords):
+                    clean_news.append(entry)
         except Exception:
             pass
-    return news
+            
+    return clean_news
 
-all_news = fetch_breaking_news()
+all_news = fetch_pure_trading_news()
 top_headline = all_news[0].title.upper() if all_news else "AUCUNE DEPECHE D'URGENCE"
 
 st.markdown(f"""
@@ -124,7 +132,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. BANDEAU TICKEUR EN DIRECT
+# TICKEUR COURS
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def fetch_market_data():
@@ -164,9 +172,6 @@ if market_data:
 
 st.divider()
 
-# ---------------------------------------------------------
-# FONCTION IA GEMINI
-# ---------------------------------------------------------
 def query_gemini(prompt_text):
     if "GEMINI_API_KEY" not in st.secrets:
         return "Clé API Gemini non configurée."
@@ -180,15 +185,11 @@ def query_gemini(prompt_text):
     except Exception as e:
         return f"Erreur IA : {str(e)}"
 
-# ---------------------------------------------------------
-# 3. PANNEAUX PRINCIPAUX (3 COLONNES - FINANCIALJUICE AU CENTRE)
-# ---------------------------------------------------------
 col_left, col_center, col_right = st.columns([1, 1.4, 1])
 
-# --- COLONNE GAUCHE : FINVIZ & TOP MOVERS ---
+# --- COLONNE GAUCHE ---
 with col_left:
     st.subheader("📈 FINVIZ — HEATMAP SECTORIELLE")
-    
     @st.cache_data(ttl=300)
     def fetch_sector_performance():
         sectors = {"Tech": "XLK", "Fin": "XLF", "Nrg": "XLE", "Santé": "XLV", "Indus": "XLI", "Conso": "XLY"}
@@ -225,14 +226,13 @@ with col_left:
     })
     st.dataframe(movers_data, hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : PURE FINANCIALJUICE SQUAWK & FEED ---
+# --- COLONNE CENTRALE : PURE FINANCIALJUICE ---
 with col_center:
     st.subheader("🔴 FINANCIALJUICE — REAL-TIME SQUAWK & FEED")
     
-    # Bouton Squawk Audio Vocale (JS Web Speech API)
     clean_speech_text = top_headline.replace("'", "\\'").replace('"', '\\"')
     squawk_js = f"""
-    <div style="background-color:#171b21; padding:6px; border-radius:4px; border:1px solid #2a2e39; margin-bottom:8px; display:flex; align-items:center; justify-space-between;">
+    <div style="background-color:#171b21; padding:6px; border-radius:4px; border:1px solid #2a2e39; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
         <span style="color:#ff4d4d; font-weight:bold; font-size:0.75rem;">🎙️ AUDIO SQUAWK BOT :</span>
         <button onclick="playSquawk()" style="background-color:#ff4d4d; color:white; border:none; padding:4px 10px; border-radius:3px; font-weight:bold; cursor:pointer; font-size:0.7rem; margin-left:10px;">
             🔊 ÉCOUTER LA DERNIÈRE DEPECHE
@@ -249,23 +249,32 @@ with col_center:
     """
     components.html(squawk_js, height=45)
     
-    # Rendu du fil FinancialJuice ultra-dense
     if all_news:
         fj_html = '<div class="fj-container">'
-        for idx, item in enumerate(all_news[:10]):
+        for idx, item in enumerate(all_news[:12]):
             title = item.title
             
-            # Extraction heure
             time_str = datetime.now().strftime("%H:%M")
             if hasattr(item, 'published_parsed') and item.published_parsed:
                 time_str = f"{item.published_parsed.tm_hour:02d}:{item.published_parsed.tm_min:02d}"
             
-            # Mots-clés déclencheurs d'alerte rouge
-            is_urgent = any(kw in title.upper() for kw in ["FED", "INFLATION", "CPI", "WAR", "BREAKING", "ALERT", "BIDEN", "TRUMP", "POWELL", "ECB", "RATE"])
+            # Détection intelligente des catégories FinancialJuice
+            t_upper = title.upper()
+            if any(k in t_upper for k in ["FED", "CPI", "INFLATION", "POWELL", "ECB", "RATE", "BOJ", "JOBS", "NFP"]):
+                badge_tag = "MACRO/CENTRAL BANK"
+                is_urgent = True
+            elif any(k in t_upper for k in ["USD", "EUR", "JPY", "GBP", "FOREX"]):
+                badge_tag = "FOREX"
+                is_urgent = False
+            elif any(k in t_upper for k in ["STOCKS", "EARNINGS", "CEO", "S&P", "NASDAQ", "SHARES"]):
+                badge_tag = "EQUITIES"
+                is_urgent = False
+            else:
+                badge_tag = "MARKETS"
+                is_urgent = "BREAKING" in t_upper
             
             row_class = "fj-row-alert" if is_urgent else "fj-row-normal"
             badge_class = "fj-badge-red" if is_urgent else "fj-badge"
-            badge_tag = "HIGH IMPACT" if is_urgent else "MACRO"
             
             fj_html += f"""
             <div class="fj-row {row_class}">
@@ -279,18 +288,15 @@ with col_center:
         
     st.divider()
     
-    # Analyseur IA rapide de la dépêche sélectionnée
     st.subheader("⚡ Analyse Flash IA Gemini")
     if st.button("🔍 Analyser la dépêche en tête avec Gemini"):
         with st.spinner("Analyse par l'IA..."):
-            prompt = f"Analyse cette dépêche financière : '{top_headline}'. Donne uniquement : 1. Impact Marché (HAUSSIER/BAISSIER/NEUTRE) 2. Actifs impactés (ex: S&P500, EURUSD, Or) 3. Explication en 10 mots max."
-            analysis = query_gemini(prompt)
-            st.info(analysis)
+            prompt = f"Analyse cette dépêche de marché : '{top_headline}'. Réponds uniquement : 1. IMPACT (HAUSSIER/BAISSIER/NEUTRE) 2. ACTIFS TOUCHÉS 3. EXPLICATION (10 mots max)."
+            st.info(query_gemini(prompt))
 
-# --- COLONNE DROITE : BLOOMBERG MACRO & PROMPT ---
+# --- COLONNE DROITE ---
 with col_right:
-    st.subheader("🌐 BLOOMBERG — INDICATEURS MACRO")
-    
+    st.subheader("🌐 BLOOMBERG — MACRO & TAUX")
     @st.cache_data(ttl=300)
     def fetch_macro():
         macro_tickers = {
@@ -318,8 +324,8 @@ with col_right:
 
     st.divider()
     st.subheader("💬 Prompt IA Terminal")
-    user_query = st.text_input("Question Macro :", placeholder="Ex: Impact hausse taux 10 ans sur la Tech...", label_visibility="collapsed")
+    user_query = st.text_input("Question Macro :", placeholder="Ex: Impact DXY sur l'Or...", label_visibility="collapsed")
     if user_query:
         with st.spinner("Analyse..."):
-            st.info(query_gemini(f"En tant qu'expert macroéconomie de salle de marché, réponds très brièvement : {user_query}"))
+            st.info(query_gemini(f"Expert macro, réponds court : {user_query}"))
             
