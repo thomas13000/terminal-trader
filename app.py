@@ -4,9 +4,6 @@ import yfinance as yf
 from google import genai
 import pandas as pd
 import plotly.express as px
-from datetime import datetime, timedelta
-import requests
-import zoneinfo
 
 # ---------------------------------------------------------
 # CONFIGURATION PAGE & STYLE BLOOMBERG
@@ -34,47 +31,6 @@ st.markdown("""
     .metric-title { color: #848e9c; font-size: 0.7rem; font-weight: 600; }
     .metric-value { font-size: 1rem; font-weight: bold; }
     
-    .cal-container {
-        background-color: #12161c;
-        border: 1px solid #2a2e39;
-        border-radius: 6px;
-        padding: 8px;
-        max-height: 360px;
-        overflow-y: auto;
-    }
-    .cal-day-header {
-        background-color: #1f242d;
-        color: #f0b90b;
-        padding: 5px 10px;
-        font-size: 0.78rem;
-        font-weight: bold;
-        border-radius: 4px;
-        margin-top: 6px;
-        margin-bottom: 4px;
-        border-left: 3px solid #f0b90b;
-    }
-    .cal-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 5px 8px;
-        border-bottom: 1px solid #1e222d;
-        font-size: 0.75rem;
-        background-color: rgba(255, 77, 77, 0.08);
-        border-left: 4px solid #ff4d4d;
-        margin-bottom: 3px;
-        border-radius: 3px;
-    }
-    .cal-time { color: #00ff88; font-weight: bold; min-width: 48px; font-family: monospace; }
-    .cal-currency {
-        background-color: #ff4d4d; color: white; padding: 1px 5px; border-radius: 3px;
-        font-weight: bold; font-size: 0.68rem; min-width: 38px; text-align: center; margin-right: 8px;
-    }
-    .cal-title { color: #ffffff; font-weight: 600; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
-    .cal-val-box { display: flex; gap: 10px; font-size: 0.7rem; color: #848e9c; min-width: 130px; justify-content: flex-end; }
-    .cal-val { color: #d1d4dc; font-weight: 500; }
-    
-    /* STYLE FLUX NEWS YFINANCE */
     .news-container {
         background-color: #12161c;
         border: 1px solid #2a2e39;
@@ -83,22 +39,6 @@ st.markdown("""
         max-height: 280px;
         overflow-y: auto;
     }
-    .news-card {
-        background-color: #171b21;
-        border-left: 3px solid #00ff88;
-        padding: 6px 10px;
-        margin-bottom: 6px;
-        border-radius: 4px;
-    }
-    .news-title {
-        color: #ffffff;
-        font-weight: bold;
-        text-decoration: none;
-        font-size: 0.78rem;
-        display: block;
-    }
-    .news-title:hover { color: #00ff88; }
-    .news-source { color: #848e9c; font-size: 0.65rem; margin-top: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -140,95 +80,6 @@ header_html = """
 </script>
 """
 components.html(header_html, height=75)
-
-# ---------------------------------------------------------
-# CALENDRIER ÉCONOMIQUE (FXSTREET API - SANS BLOCAGE)
-# ---------------------------------------------------------
-@st.cache_data(ttl=180)
-def fetch_fxstreet_calendar():
-    p_tz = zoneinfo.ZoneInfo("Europe/Paris")
-    now_p = datetime.now(p_tz)
-    
-    start_date = now_p.strftime("%Y-%m-%d")
-    end_date = (now_p + timedelta(days=7)).strftime("%Y-%m-%d")
-    
-    url = f"https://calendar-api.fxstreet.com/en/api/v1/eventDates?start={start_date}&end={end_date}&volatilities=HIGH"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "application/json"
-    }
-    
-    parsed = []
-    try:
-        res = requests.get(url, headers=headers, timeout=8)
-        if res.status_code == 200:
-            events = res.json()
-            for item in events:
-                date_str = item.get("dateUtc", "")
-                if date_str:
-                    dt_utc = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                    dt_local = dt_utc.astimezone(p_tz)
-                    
-                    if dt_local >= now_p - timedelta(hours=2):
-                        day_label = f"📅 {dt_local.strftime('%A %d/%m').upper()}"
-                        if dt_local.date() == now_p.date():
-                            day_label = f"📅 AUJOURD'HUI ({dt_local.strftime('%d/%m')})"
-                        elif dt_local.date() == (now_p.date() + timedelta(days=1)):
-                            day_label = f"📅 DEMAIN ({dt_local.strftime('%d/%m')})"
-
-                        parsed.append({
-                            "category": day_label,
-                            "time_str": dt_local.strftime("%H:%M"),
-                            "currency": item.get("currencyCode", "USD"),
-                            "title": item.get("name", ""),
-                            "forecast": str(item.get("consensus", "-")),
-                            "previous": str(item.get("previous", "-")),
-                            "dt": dt_local
-                        })
-    except Exception:
-        pass
-
-    parsed.sort(key=lambda x: x["dt"])
-    return parsed
-
-# ---------------------------------------------------------
-# OPTION 3 : ACTUALITÉS VIA YFINANCE (AUCUN MODULE EN PLUS)
-# ---------------------------------------------------------
-@st.cache_data(ttl=300)
-def fetch_yf_news():
-    news_items = []
-    try:
-        sp = yf.Ticker("^GSPC")
-        raw_news = sp.news
-        if raw_news:
-            for item in raw_news[:8]:
-                # Ingestion selon la structure retournée par yfinance
-                title = item.get("title") or item.get("content", {}).get("title", "")
-                link = item.get("link") or item.get("content", {}).get("clickThroughUrl", {}).get("url", "#")
-                provider = item.get("publisher") or item.get("content", {}).get("provider", {}).get("displayName", "Yahoo Finance")
-                
-                if title:
-                    news_items.append({
-                        "title": title,
-                        "link": link,
-                        "source": provider
-                    })
-    except Exception:
-        pass
-    return news_items
-
-cal_events = fetch_fxstreet_calendar()
-news_feed = fetch_yf_news()
-
-# Banner Alert
-alert_text = f"PROCHAIN IMPACT : [{cal_events[0]['currency']}] {cal_events[0]['title']} à {cal_events[0]['time_str']}" if cal_events else "AUCUN ÉVÉNEMENT MAJEUR IMMINENT"
-st.markdown(f"""
-<div style="background-color: #2b0000; border: 1px solid #ff4d4d; border-radius: 4px; padding: 2px 8px; margin-bottom: 8px;">
-    <marquee behavior="scroll" direction="left" scrollamount="7" style="color: #ff4d4d; font-weight: bold; font-size: 0.78rem;">
-        🚨 CALENDRIER MACRO : {alert_text}
-    </marquee>
-</div>
-""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # BANDEAU MARKET DATA
@@ -274,6 +125,33 @@ def query_gemini(prompt):
         return f"Erreur IA : {e}"
 
 # ---------------------------------------------------------
+# RECUPERATION DES NEWS YFINANCE
+# ---------------------------------------------------------
+@st.cache_data(ttl=300)
+def fetch_yf_news():
+    news_items = []
+    try:
+        sp = yf.Ticker("^GSPC")
+        raw_news = sp.news
+        if raw_news:
+            for item in raw_news[:8]:
+                title = item.get("title") or item.get("content", {}).get("title", "")
+                link = item.get("link") or item.get("content", {}).get("clickThroughUrl", {}).get("url", "#")
+                provider = item.get("publisher") or item.get("content", {}).get("provider", {}).get("displayName", "Yahoo Finance")
+                
+                if title:
+                    news_items.append({
+                        "title": title,
+                        "link": link,
+                        "source": provider
+                    })
+    except Exception:
+        pass
+    return news_items
+
+news_feed = fetch_yf_news()
+
+# ---------------------------------------------------------
 # LAYOUT PRINCIPAL (3 COLONNES)
 # ---------------------------------------------------------
 c_left, c_center, c_right = st.columns([1, 1.4, 1])
@@ -310,47 +188,40 @@ with c_left:
         "Chg (%)": ["+3.4%", "-2.1%", "+0.8%", "+4.1%", "-0.4%"]
     }), hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : CALENDRIER + NEWS YAHOO FINANCE ---
+# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW + NEWS ---
 with c_center:
-    st.subheader("🔴 CALENDRIER FXSTREET (HIGH IMPACT)")
+    st.subheader("🔴 CALENDRIER ÉCONOMIQUE (TRADINGVIEW)")
     
-    if cal_events:
-        html_out = '<div class="cal-container">'
-        curr_cat = ""
-        for ev in cal_events:
-            if ev['category'] != curr_cat:
-                curr_cat = ev['category']
-                html_out += f'<div class="cal-day-header">{curr_cat}</div>'
-            html_out += (
-                f'<div class="cal-row">'
-                f'<span class="cal-time">{ev["time_str"]}</span>'
-                f'<span class="cal-currency">{ev["currency"]}</span>'
-                f'<span class="cal-title" title="{ev["title"]}">{ev["title"]}</span>'
-                f'<div class="cal-val-box">'
-                f'<span>Prév : <b class="cal-val">{ev["forecast"]}</b></span>'
-                f'<span>Préc : <b class="cal-val">{ev["previous"]}</b></span>'
-                f'</div></div>'
-            )
-        html_out += '</div>'
-        st.markdown(html_out, unsafe_allow_html=True)
-    else:
-        st.info("Aucune annonce à fort impact planifiée.")
+    # Widget officiel TradingView (aucun blocage bot possible)
+    tv_widget = """
+    <div class="tradingview-widget-container" style="width: 100%; height: 380px;">
+      <div class="tradingview-widget-container__widget" style="width: 100%; height: 380px;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+      {
+      "colorTheme": "dark",
+      "isTransparent": true,
+      "width": "100%",
+      "height": "380",
+      "locale": "fr",
+      "importanceFilter": "0,1",
+      "currencyFilter": "USD,EUR,GBP,JPY,CAD,AUD,CHF"
+    }
+      </script>
+    </div>
+    """
+    components.html(tv_widget, height=385)
 
-    # --- SECTION NEWS YAHOO FINANCE ---
-    st.subheader("📰 FLUX ACTU MARCHÉS (YAHOO FINANCE / REUTERS)")
+    # --- SECTION NEWS YAHOO FINANCE (CORRIGÉE SANS RETOUR CODE) ---
+    st.subheader("📰 FLUX ACTU MARCHÉS (REUTERS / YAHOO FINANCE)")
     if news_feed:
-        news_html = '<div class="news-container">'
-        for n in news_feed:
-            news_html += f"""
-            <div class="news-card">
-                <a href="{n['link']}" target="_blank" class="news-title">{n['title']}</a>
-                <div class="news-source">Source : {n['source']}</div>
-            </div>
-            """
-        news_html += '</div>'
-        st.markdown(news_html, unsafe_allow_html=True)
+        # Alignement strict à gauche sans espaces pour éviter la conversion en bloc de code
+        cards_html = "".join([
+            f'<div style="background-color: #171b21; border-left: 3px solid #00ff88; padding: 6px 10px; margin-bottom: 6px; border-radius: 4px;"><a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a><div style="color: #848e9c; font-size: 0.65rem; margin-top: 2px;">Source : {n["source"]}</div></div>'
+            for n in news_feed
+        ])
+        st.markdown(f'<div class="news-container">{cards_html}</div>', unsafe_allow_html=True)
     else:
-        st.info("Aucune actualité récente chargée.")
+        st.info("Aucune actualité chargée.")
 
 # --- COLONNE DROITE ---
 with c_right:
