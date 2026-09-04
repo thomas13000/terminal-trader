@@ -82,6 +82,20 @@ header_html = """
 components.html(header_html, height=75)
 
 # ---------------------------------------------------------
+# BANDEAU DÉFILANT D'ALERTE MACRO (BLOOMBERG RED)
+# ---------------------------------------------------------
+texte_alerte = "🚨 ALERTE MACRO : Publication NFP & Taux de chômage US à 14:30 — Risque de volatilité extrême sur USD, Or et S&P 500 !"
+
+st.markdown(f"""
+<div style="background-color: rgba(255, 59, 48, 0.15); border: 1px solid #ff3b30; border-radius: 4px; padding: 4px 8px; margin-bottom: 8px;">
+    <marquee behavior="scroll" direction="left" scrollamount="7" style="color: #ffffff; font-weight: bold; font-size: 0.82rem; display: flex; align-items: center;">
+        <span style="background-color: #ff3b30; color: #ffffff; padding: 2px 6px; border-radius: 3px; margin-right: 10px; font-size: 0.68rem; font-weight: 900;">HIGH IMPACT</span>
+        {texte_alerte}
+    </marquee>
+</div>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
 # BANDEAU MARKET DATA
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
@@ -115,7 +129,7 @@ if mkt:
 st.divider()
 
 # ---------------------------------------------------------
-# FONCTION GEMINI IA
+# FONCTION GEMINI IA (gemini-3.6-flash)
 # ---------------------------------------------------------
 def query_gemini(prompt):
     if "GEMINI_API_KEY" not in st.secrets:
@@ -191,7 +205,7 @@ with c_left:
         "Chg (%)": ["+3.4%", "-2.1%", "+0.8%", "+4.1%", "-0.4%"]
     }), hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW + NEWS BLOOMBERG RED ---
+# --- COLONNE CENTRALE : CALENDRIER TRADINGVIEW + NEWS ---
 with c_center:
     st.subheader("🔴 CALENDRIER ÉCONOMIQUE (TRADINGVIEW)")
     
@@ -215,7 +229,6 @@ with c_center:
 
     st.subheader("📰 FLUX ACTU MARCHÉS (REUTERS / YAHOO FINANCE)")
     
-    # CHARTE COULEUR BLOOMBERG RED
     BLOOMBERG_RED = "#ff3b30"
     RED_BG = "rgba(255, 59, 48, 0.12)"
     STANDARD_GREEN = "#00ff88"
@@ -223,7 +236,6 @@ with c_center:
     if news_feed:
         cards_list = []
         for i, n in enumerate(news_feed):
-            # Les 2 actualités les plus récentes passent en HIGH IMPACT avec le rouge Bloomberg
             is_high_impact = i < 2
             
             border_col = BLOOMBERG_RED if is_high_impact else STANDARD_GREEN
