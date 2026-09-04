@@ -5,7 +5,7 @@ from google import genai
 import pandas as pd
 
 # ---------------------------------------------------------
-# CONFIGURATION PAGE & STYLE BLOOMBERG / FONDU GOLD GLOW
+# CONFIGURATION PAGE & STYLES HAUT DE GAMME
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="TERMINAL TRADER PRO",
@@ -13,69 +13,182 @@ st.set_page_config(
     layout="wide"
 )
 
+# Injection des Google Fonts + Style CSS complet
 st.markdown("""
 <style>
-    .block-container { padding-top: 4rem !important; padding-bottom: 0.8rem !important; }
-    .stApp { background-color: #0c0f12; color: #d1d4dc; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    /* Reset & Fond Général */
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
     
-    h2, h3 { font-size: 0.85rem !important; font-weight: 600 !important; margin-top: 4px !important; margin-bottom: 4px !important; color: #848e9c !important; }
+    .stApp {
+        background-color: #090a0f;
+        color: #e1e3ea;
+    }
     
-    .metric-card {
-        background-color: #171b21;
+    .block-container {
+        padding-top: 2.2rem !important;
+        padding-bottom: 1rem !important;
+        max-width: 98% !important;
+    }
+
+    /* Scrollbars ultra-discrètes */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #090a0f; }
+    ::-webkit-scrollbar-thumb { background: #1e2430; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #f0b90b; }
+
+    /* Titres de sections */
+    .section-header {
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: #787b86;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Cartes Métriques du Haut */
+    .metric-card-v2 {
+        background: linear-gradient(145deg, #131722 0%, #0d1017 100%);
+        border: 1px solid #1e222d;
+        border-radius: 8px;
+        padding: 8px 12px;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .metric-card-v2:hover {
+        border-color: rgba(240, 185, 11, 0.3);
+        transform: translateY(-1px);
+    }
+    .metric-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #787b86;
+        letter-spacing: 0.5px;
+    }
+    .metric-price {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #f0f3fa;
+        margin: 2px 0;
+    }
+    .metric-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 600;
+        padding: 2px 6px;
         border-radius: 4px;
-        padding: 6px;
-        border: 1px solid #2a2e39;
-        text-align: center;
+        display: inline-block;
     }
-    .metric-title { color: #848e9c; font-size: 0.7rem; font-weight: 600; }
-    .metric-value { font-size: 1rem; font-weight: bold; }
-    
-    .news-container {
-        background-color: #12161c;
-        border: 1px solid #2a2e39;
-        border-radius: 6px;
-        padding: 8px;
-        max-height: 280px;
-        overflow-y: auto;
-    }
-    
+    .badge-bull { background: rgba(8, 153, 129, 0.15); color: #089981; }
+    .badge-bear { background: rgba(242, 54, 69, 0.15); color: #f23645; }
+
     /* =========================================================
-       STYLE 1 : FONDU & GOLD GLOW (TRADING PRO)
+       ONGLETS PREMIUM (GLASSMORPHIC & GLOW)
        ========================================================= */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background: linear-gradient(180deg, rgba(18, 22, 28, 0.9) 0%, rgba(12, 15, 18, 0.3) 100%);
-        padding: 8px 12px 0 12px;
-        border-radius: 10px 10px 0 0;
-        border-bottom: 1px solid #2a2e39;
+        background: #131722;
+        padding: 6px;
+        border-radius: 10px;
+        border: 1px solid #1e222d;
+        margin-bottom: 16px;
     }
 
     .stTabs [data-baseweb="tab"] {
         background: transparent !important;
         border: none !important;
-        border-radius: 6px 6px 0 0 !important;
-        color: #848e9c !important;
+        border-radius: 6px !important;
+        color: #787b86 !important;
         font-weight: 600 !important;
-        font-size: 0.85rem !important;
-        padding: 8px 20px !important;
-        transition: all 0.25s ease !important;
+        font-size: 0.82rem !important;
+        padding: 8px 22px !important;
+        transition: all 0.25s ease-in-out !important;
     }
 
     .stTabs [data-baseweb="tab"]:hover {
-        color: #ffffff !important;
-        background: rgba(255, 255, 255, 0.05) !important;
+        color: #f0f3fa !important;
+        background: rgba(255, 255, 255, 0.04) !important;
     }
 
     .stTabs [aria-selected="true"] {
         color: #f0b90b !important;
-        background: linear-gradient(180deg, rgba(240, 185, 11, 0.18) 0%, rgba(240, 185, 11, 0.01) 100%) !important;
-        border-bottom: 2px solid #f0b90b !important;
-        box-shadow: 0px 8px 20px rgba(240, 185, 11, 0.2);
+        background: rgba(240, 185, 11, 0.1) !important;
+        box-shadow: inset 0 0 0 1px rgba(240, 185, 11, 0.3), 0 4px 15px rgba(240, 185, 11, 0.12) !important;
     }
 
     .stTabs [data-baseweb="tab-highlight-title"],
     .stTabs [data-baseweb="tab-border-selected"] {
         background-color: transparent !important;
+    }
+
+    /* Container de News */
+    .news-wrapper {
+        background: #131722;
+        border: 1px solid #1e222d;
+        border-radius: 8px;
+        padding: 10px;
+        max-height: 295px;
+        overflow-y: auto;
+    }
+    .news-card {
+        background: #181c27;
+        border-left: 3px solid #f0b90b;
+        border-radius: 0 6px 6px 0;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        transition: transform 0.15s ease;
+    }
+    .news-card:hover {
+        transform: translateX(3px);
+        background: #1e2430;
+    }
+    .news-title {
+        color: #f0f3fa;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-decoration: none;
+        line-height: 1.3;
+        display: block;
+    }
+    .news-meta {
+        font-size: 0.63rem;
+        color: #787b86;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Input IA Personnalisé */
+    .stTextInput input {
+        background-color: #131722 !important;
+        border: 1px solid #1e222d !important;
+        color: #f0f3fa !important;
+        border-radius: 6px !important;
+        font-size: 0.8rem !important;
+    }
+    .stTextInput input:focus {
+        border-color: #f0b90b !important;
+        box-shadow: 0 0 0 1px #f0b90b !important;
+    }
+
+    /* Animation LED clignotante pour alerte */
+    @keyframes pulse-red {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(242, 54, 69, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(242, 54, 69, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(242, 54, 69, 0); }
+    }
+    .led-red {
+        width: 8px; height: 8px; background-color: #f23645; border-radius: 50%;
+        display: inline-block; animation: pulse-red 2s infinite; margin-right: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -84,21 +197,28 @@ st.markdown("""
 components.html("<script>setTimeout(function(){ window.location.reload(); }, 900000);</script>", height=0)
 
 # ---------------------------------------------------------
-# HORLOGES TEMPS RÉEL (JS)
+# HORLOGES TEMPS RÉEL (JS) - DESIGN NATIVE
 # ---------------------------------------------------------
 header_html = """
 <style>
-    body { margin: 0; padding: 2px; background-color: transparent; font-family: system-ui, sans-serif; overflow: hidden; }
-    .header-box { display: flex; justify-content: space-between; align-items: center; background-color: #12161c; padding: 8px 16px; border: 1px solid #2a2e39; border-radius: 6px; }
-    .header-title { font-size: 1.4rem; font-weight: 900; color: #f0b90b; margin: 0; }
-    .clock-card { text-align: center; background-color: #171b21; padding: 4px 12px; border-radius: 4px; border: 1px solid #2a2e39; min-width: 95px; }
-    .clock-label { font-size: 0.65rem; color: #848e9c; font-weight: bold; }
-    .clock-time { font-size: 1.1rem; color: #00ff88; font-weight: bold; font-family: monospace; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@800&family=JetBrains+Mono:wght@600&display=swap');
+    body { margin: 0; padding: 0; background: transparent; font-family: 'Inter', sans-serif; overflow: hidden; }
+    .header-box { 
+        display: flex; justify-content: space-between; align-items: center; 
+        background: #131722; padding: 8px 16px; border: 1px solid #1e222d; border-radius: 8px; 
+    }
+    .header-title { font-size: 1.15rem; font-weight: 900; color: #f0b90b; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+    .clocks-wrap { display: flex; gap: 10px; }
+    .clock-card { 
+        background: #181c27; padding: 4px 12px; border-radius: 6px; border: 1px solid #2a2e39; text-align: center; min-width: 90px; 
+    }
+    .clock-label { font-size: 0.6rem; color: #787b86; font-weight: 700; letter-spacing: 0.5px; }
+    .clock-time { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; color: #089981; font-weight: 600; }
 </style>
 
 <div class="header-box">
     <div class="header-title">⚡ TERMINAL TRADER PRO</div>
-    <div style="display: flex; gap: 12px;">
+    <div class="clocks-wrap">
         <div class="clock-card">
             <div class="clock-label">PARIS</div>
             <div id="clock-paris" class="clock-time">--:--:--</div>
@@ -120,26 +240,29 @@ header_html = """
     updateClocks();
 </script>
 """
-components.html(header_html, height=75)
+components.html(header_html, height=52)
 
 # ---------------------------------------------------------
-# BANDEAU DÉFILANT D'ALERTE MACRO
+# BANDEAU D'ALERTE MACRO MODERNE
 # ---------------------------------------------------------
-texte_alerte = "🚨 ALERTE MACRO : Publication NFP & Taux de chômage US à 14:30 — Risque de volatilité extrême sur USD, Or et S&P 500 !"
+texte_alerte = "Publication NFP & Taux de chômage US à 14:30 — Volatilité extrême attendue sur USD, Or et Indices US !"
 
 st.markdown(f"""
-<div style="background-color: rgba(255, 59, 48, 0.15); border: 1px solid #ff3b30; border-radius: 4px; padding: 4px 8px; margin-bottom: 8px;">
-    <marquee behavior="scroll" direction="left" scrollamount="7" style="color: #ffffff; font-weight: bold; font-size: 0.82rem; display: flex; align-items: center;">
-        <span style="background-color: #ff3b30; color: #ffffff; padding: 2px 6px; border-radius: 3px; margin-right: 10px; font-size: 0.68rem; font-weight: 900;">HIGH IMPACT</span>
+<div style="background: rgba(242, 54, 69, 0.08); border: 1px solid rgba(242, 54, 69, 0.3); border-radius: 6px; padding: 6px 12px; margin-top: 4px; margin-bottom: 12px; display: flex; align-items: center; overflow: hidden;">
+    <div style="display: flex; align-items: center; white-space: nowrap; margin-right: 12px;">
+        <span class="led-red"></span>
+        <span style="color: #f23645; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">HIGH IMPACT</span>
+    </div>
+    <div style="color: #f0f3fa; font-size: 0.78rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
         {texte_alerte}
-    </marquee>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# GENERATION DE GRAPHIQUE SPARKLINE (SVG 1 MIN)
+# GENERATION SPARKLINE HD AVEC DÉGRADÉ
 # ---------------------------------------------------------
-def generate_sparkline(series, width=120, height=32, color="#00ff88"):
+def generate_sparkline(series, width=130, height=34, color="#089981"):
     values = series.dropna().tolist()
     if len(values) < 2:
         return ""
@@ -155,12 +278,23 @@ def generate_sparkline(series, width=120, height=32, color="#00ff88"):
     n = len(values)
     for i, val in enumerate(values):
         x = (i / (n - 1)) * width
-        y = height - ((val - min_val) / val_range) * (height - 6) - 3
+        y = height - ((val - min_val) / val_range) * (height - 8) - 4
         points.append(f"{x:.1f},{y:.1f}")
     
     polyline = " ".join(points)
+    fill_points = f"0,{height} " + polyline + f" {width},{height}"
+    
+    grad_id = f"grad_{abs(hash(polyline))}"
+    
     return f'''<svg width="100%" height="{height}" viewBox="0 0 {width} {height}" preserveAspectRatio="none" style="margin-top: 4px;">
-        <polyline fill="none" stroke="{color}" stroke-width="1.8" points="{polyline}"/>
+        <defs>
+            <linearGradient id="{grad_id}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="{color}" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="{color}" stop-opacity="0.0"/>
+            </linearGradient>
+        </defs>
+        <polygon fill="url(#{grad_id})" points="{fill_points}"/>
+        <polyline fill="none" stroke="{color}" stroke-width="1.8" stroke-linecap="round" points="{polyline}"/>
     </svg>'''
 
 # ---------------------------------------------------------
@@ -187,18 +321,23 @@ if mkt:
     cols = st.columns(len(mkt))
     for i, (k, (v, c, series)) in enumerate(mkt.items()):
         with cols[i]:
-            col = "#00ff88" if c >= 0 else "#ff3b30"
+            is_bull = c >= 0
+            col = "#089981" if is_bull else "#f23645"
+            badge_class = "badge-bull" if is_bull else "badge-bear"
             sparkline = generate_sparkline(series, color=col)
+            
             st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">{k}</div>
-                <div class="metric-value" style="color:{col};">{v:,.2f}</div>
-                <div style="color:{col}; font-size:0.7rem;">{c:+.2f}% (1m)</div>
+            <div class="metric-card-v2">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="metric-label">{k}</span>
+                    <span class="metric-badge {badge_class}">{c:+.2f}%</span>
+                </div>
+                <div class="metric-price">{v:,.2f}</div>
                 {sparkline}
             </div>
             """, unsafe_allow_html=True)
 
-st.divider()
+st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # FONCTIONS IA & NEWS
@@ -238,28 +377,28 @@ def fetch_yf_news():
 news_feed = fetch_yf_news()
 
 # ---------------------------------------------------------
-# SYSTEME D'ONGLETS (STYLE 1 : FONDU GOLD GLOW)
+# SYSTEME D'ONGLETS REDESSINÉ
 # ---------------------------------------------------------
 tab_main, tab_1, tab_2, tab_3 = st.tabs([
-    "⚡ Terminal Pro", 
-    "📁 Onglet 1", 
-    "📁 Onglet 2", 
-    "📁 Onglet 3"
+    "⚡ Vue Marchés & IA", 
+    "📈 Analyse Technique", 
+    "📊 Portefeuille", 
+    "⚙️ Configuration"
 ])
 
 # =========================================================
-# ONGLET PRINCIPAL : PAGE D'ARRIVÉE
+# ONGLET PRINCIPAL
 # =========================================================
 with tab_main:
     c_left, c_center, c_right = st.columns([1.5, 1.2, 1])
 
     # --- COLONNE GAUCHE : HEATMAP NASDAQ ---
     with c_left:
-        st.subheader("🔥 HEATMAP NASDAQ (PAR SECTEURS)")
+        st.markdown('<div class="section-header">🔥 Heatmap Nasdaq 100</div>', unsafe_allow_html=True)
         
         heatmap_html = """
-        <div class="tradingview-widget-container" style="height: 580px; width: 100%;">
-          <div class="tradingview-widget-container__widget" style="height: 580px; width: 100%;"></div>
+        <div class="tradingview-widget-container" style="height: 560px; width: 100%;">
+          <div class="tradingview-widget-container__widget" style="height: 560px; width: 100%;"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
           {
             "exchanges": [],
@@ -275,26 +414,26 @@ with tab_main:
             "isZoomEnabled": true,
             "hasSymbolTooltip": true,
             "width": "100%",
-            "height": "580"
+            "height": "560"
           }
           </script>
         </div>
         """
-        components.html(heatmap_html, height=585)
+        components.html(heatmap_html, height=565)
 
     # --- COLONNE CENTRALE : CALENDRIER + NEWS ---
     with c_center:
-        st.subheader("🔴 CALENDRIER ÉCONOMIQUE")
+        st.markdown('<div class="section-header">📅 Calendrier Économique</div>', unsafe_allow_html=True)
         
         tv_widget = """
-        <div class="tradingview-widget-container" style="width: 100%; height: 280px;">
-          <div class="tradingview-widget-container__widget" style="width: 100%; height: 280px;"></div>
+        <div class="tradingview-widget-container" style="width: 100%; height: 260px;">
+          <div class="tradingview-widget-container__widget" style="width: 100%; height: 260px;"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
           {
           "colorTheme": "dark",
           "isTransparent": true,
           "width": "100%",
-          "height": "280",
+          "height": "260",
           "locale": "fr",
           "importanceFilter": "0,1",
           "currencyFilter": "USD,EUR,GBP,JPY,CAD,AUD,CHF"
@@ -302,40 +441,36 @@ with tab_main:
           </script>
         </div>
         """
-        components.html(tv_widget, height=285)
+        components.html(tv_widget, height=265)
 
-        st.subheader("📰 FLUX ACTU MARCHÉS")
-        
-        BLOOMBERG_RED = "#ff3b30"
-        RED_BG = "rgba(255, 59, 48, 0.12)"
-        STANDARD_GREEN = "#00ff88"
+        st.markdown('<div class="section-header">📰 Fil d\'Actualités En Direct</div>', unsafe_allow_html=True)
 
         if news_feed:
             cards_list = []
             for i, n in enumerate(news_feed):
-                is_high_impact = i < 2
-                border_col = BLOOMBERG_RED if is_high_impact else STANDARD_GREEN
-                bg_col = RED_BG if is_high_impact else "#171b21"
-                badge_html = f'<span style="background-color: {BLOOMBERG_RED}; color: #ffffff; font-size: 0.55rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; margin-right: 6px;">HIGH IMPACT</span>' if is_high_impact else ''
+                is_urgent = i < 2
+                border_style = "border-left: 3px solid #f23645;" if is_urgent else "border-left: 3px solid #089981;"
+                badge_urgent = '<span style="background: rgba(242,54,69,0.2); color:#f23645; font-size:0.55rem; font-weight:800; padding:1px 4px; border-radius:3px;">URGENT</span>' if is_urgent else ''
                 
                 cards_list.append(
-                    f'<div style="background-color: {bg_col}; border-left: 4px solid {border_col}; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px;">'
-                    f'<div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<span style="color: #848e9c; font-size: 0.65rem;">Source : {n["source"]}</span></div>'
-                    f'<a href="{n["link"]}" target="_blank" style="color: #ffffff; font-weight: bold; text-decoration: none; font-size: 0.78rem; display: block;">{n["title"]}</a>'
+                    f'<div class="news-card" style="{border_style}">'
+                    f'<div class="news-meta">{badge_urgent}<span>{n["source"]}</span></div>'
+                    f'<a href="{n["link"]}" target="_blank" class="news-title">{n["title"]}</a>'
                     f'</div>'
                 )
                 
             cards_html = "".join(cards_list)
-            st.markdown(f'<div class="news-container">{cards_html}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="news-wrapper">{cards_html}</div>', unsafe_allow_html=True)
         else:
-            st.info("Aucune actualité chargée.")
+            st.info("Aucune actualité disponible.")
 
     # --- COLONNE DROITE : MACRO & IA ---
     with c_right:
-        st.subheader("🌐 MACRO & TAUX")
+        st.markdown('<div class="section-header">🌐 Variables Macro</div>', unsafe_allow_html=True)
+        
         @st.cache_data(ttl=900)
         def fetch_macro():
-            tickers = {"Taux US 10Y": "^TNX", "Pétrole WTI": "CL=F", "EUR / USD": "EURUSD=X", "US Dollar Index": "DX-Y.NYB"}
+            tickers = {"Taux US 10Y": "^TNX", "Pétrole WTI": "CL=F", "EUR / USD": "EURUSD=X", "Dollar Index": "DX-Y.NYB"}
             res = {}
             for name, tk in tickers.items():
                 try:
@@ -350,27 +485,43 @@ with tab_main:
         macro_data = fetch_macro()
         if macro_data:
             for k, (v, c) in macro_data.items():
-                col = "#00ff88" if c >= 0 else BLOOMBERG_RED
-                st.markdown(f"**{k}** : `{v:,.2f}` (<span style='color:{col}'>{c:+.2f}%</span>)", unsafe_allow_html=True)
+                col = "#089981" if c >= 0 else "#f23645"
+                st.markdown(
+                    f"""
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#131722; border:1px solid #1e222d; padding:6px 10px; border-radius:6px; margin-bottom:6px;">
+                        <span style="font-size:0.75rem; color:#787b86; font-weight:600;">{k}</span>
+                        <span style="font-family:'JetBrains Mono'; font-size:0.82rem; font-weight:600; color:#f0f3fa;">{v:,.2f} <span style="color:{col}; font-size:0.72rem;">({c:+.2f}%)</span></span>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
 
-        st.divider()
-        st.subheader("💬 Prompt IA Macro")
-        user_q = st.text_input("Question :", placeholder="Ex : Impact NFP ?", label_visibility="collapsed")
+        st.markdown('<div class="section-header" style="margin-top:16px;">🤖 Assistant IA Macro</div>', unsafe_allow_html=True)
+        user_q = st.text_input("Question IA", placeholder="Ex : Quel impact si le NFP dépasse 200k ?", label_visibility="collapsed")
+        
         if user_q:
-            with st.spinner("Analyse..."):
-                st.info(query_gemini(f"Expert macro trading, réponds très court : {user_q}"))
+            with st.spinner("Analyse du marché..."):
+                ans = query_gemini(f"Tu es un analyste macro senior sur un terminal Bloomberg. Réponds de façon concise et synthétique à : {user_q}")
+                st.markdown(
+                    f"""
+                    <div style="background:#131722; border:1px solid #f0b90b; border-radius:6px; padding:10px; font-size:0.78rem; color:#e1e3ea; line-height:1.4;">
+                        <span style="color:#f0b90b; font-weight:700;">💡 ANALYSE IA :</span><br>{ans}
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
 
 # =========================================================
-# ONGLETS VIDES
+# ONGLETS SECONDAIRES
 # =========================================================
 with tab_1:
-    st.subheader("📌 Onglet 1")
-    st.info("Espace disponible pour tes prochains modules.")
+    st.markdown('<div class="section-header">📈 Analyse Technique Pro</div>', unsafe_allow_html=True)
+    st.info("Espace prêt pour ajouter un graphique TradingView dynamique ou tes indicateurs personnalisés.")
 
 with tab_2:
-    st.subheader("📌 Onglet 2")
-    st.info("Espace disponible pour tes prochains modules.")
+    st.markdown('<div class="section-header">📊 Suivi de Portefeuille</div>', unsafe_allow_html=True)
+    st.info("Espace prêt pour ajouter la gestion de tes positions, PnL et risque.")
 
 with tab_3:
-    st.subheader("📌 Onglet 3")
-    st.info("Espace disponible pour tes prochains modules.")
+    st.markdown('<div class="section-header">⚙️ Configuration du Terminal</div>', unsafe_allow_html=True)
+    st.info("Espace prêt pour personnaliser tes tickers, alertes et paramètres API.")
