@@ -7,7 +7,6 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import requests
 import zoneinfo
-import feedparser
 
 # ---------------------------------------------------------
 # CONFIGURATION PAGE & STYLE BLOOMBERG
@@ -40,7 +39,7 @@ st.markdown("""
         border: 1px solid #2a2e39;
         border-radius: 6px;
         padding: 8px;
-        max-height: 380px;
+        max-height: 360px;
         overflow-y: auto;
     }
     .cal-day-header {
@@ -75,7 +74,7 @@ st.markdown("""
     .cal-val-box { display: flex; gap: 10px; font-size: 0.7rem; color: #848e9c; min-width: 130px; justify-content: flex-end; }
     .cal-val { color: #d1d4dc; font-weight: 500; }
     
-    /* STYLE FLUX NEWS FOREXLIVE */
+    /* STYLE FLUX NEWS YFINANCE */
     .news-container {
         background-color: #12161c;
         border: 1px solid #2a2e39;
@@ -99,7 +98,7 @@ st.markdown("""
         display: block;
     }
     .news-title:hover { color: #00ff88; }
-    .news-date { color: #848e9c; font-size: 0.65rem; margin-top: 2px; }
+    .news-source { color: #848e9c; font-size: 0.65rem; margin-top: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -143,7 +142,7 @@ header_html = """
 components.html(header_html, height=75)
 
 # ---------------------------------------------------------
-# CALENDRIER ÉCONOMIQUE (REMPLAÇANT SANS BLOCAGE : FXSTREET)
+# CALENDRIER ÉCONOMIQUE (FXSTREET API - SANS BLOCAGE)
 # ---------------------------------------------------------
 @st.cache_data(ttl=180)
 def fetch_fxstreet_calendar():
@@ -193,26 +192,33 @@ def fetch_fxstreet_calendar():
     return parsed
 
 # ---------------------------------------------------------
-# FLUX RSS FOREXLIVE (NEWS & GÉOPOLITIQUE)
+# OPTION 3 : ACTUALITÉS VIA YFINANCE (AUCUN MODULE EN PLUS)
 # ---------------------------------------------------------
-@st.cache_data(ttl=120)
-def fetch_forexlive_rss():
-    url = "https://www.forexlive.com/feed/news"
+@st.cache_data(ttl=300)
+def fetch_yf_news():
+    news_items = []
     try:
-        feed = feedparser.parse(url)
-        news_list = []
-        for entry in feed.entries[:10]:
-            news_list.append({
-                "title": entry.title,
-                "link": entry.link,
-                "published": entry.get("published", "")[:22]
-            })
-        return news_list
+        sp = yf.Ticker("^GSPC")
+        raw_news = sp.news
+        if raw_news:
+            for item in raw_news[:8]:
+                # Ingestion selon la structure retournée par yfinance
+                title = item.get("title") or item.get("content", {}).get("title", "")
+                link = item.get("link") or item.get("content", {}).get("clickThroughUrl", {}).get("url", "#")
+                provider = item.get("publisher") or item.get("content", {}).get("provider", {}).get("displayName", "Yahoo Finance")
+                
+                if title:
+                    news_items.append({
+                        "title": title,
+                        "link": link,
+                        "source": provider
+                    })
     except Exception:
-        return []
+        pass
+    return news_items
 
 cal_events = fetch_fxstreet_calendar()
-news_feed = fetch_forexlive_rss()
+news_feed = fetch_yf_news()
 
 # Banner Alert
 alert_text = f"PROCHAIN IMPACT : [{cal_events[0]['currency']}] {cal_events[0]['title']} à {cal_events[0]['time_str']}" if cal_events else "AUCUN ÉVÉNEMENT MAJEUR IMMINENT"
@@ -304,7 +310,7 @@ with c_left:
         "Chg (%)": ["+3.4%", "-2.1%", "+0.8%", "+4.1%", "-0.4%"]
     }), hide_index=True, use_container_width=True)
 
-# --- COLONNE CENTRALE : CALENDRIER + NEWS FOREXLIVE ---
+# --- COLONNE CENTRALE : CALENDRIER + NEWS YAHOO FINANCE ---
 with c_center:
     st.subheader("🔴 CALENDRIER FXSTREET (HIGH IMPACT)")
     
@@ -328,21 +334,23 @@ with c_center:
         html_out += '</div>'
         st.markdown(html_out, unsafe_allow_html=True)
     else:
-        st.info("Aucune annonce à fort impact planifiée dans les prochains jours.")
+        st.info("Aucune annonce à fort impact planifiée.")
 
-    # --- SECTION NEWS FOREXLIVE ---
-    st.subheader("🌐 FLUX ACTU & GÉOPOLITIQUE (FOREXLIVE)")
+    # --- SECTION NEWS YAHOO FINANCE ---
+    st.subheader("📰 FLUX ACTU MARCHÉS (YAHOO FINANCE / REUTERS)")
     if news_feed:
         news_html = '<div class="news-container">'
         for n in news_feed:
             news_html += f"""
             <div class="news-card">
                 <a href="{n['link']}" target="_blank" class="news-title">{n['title']}</a>
-                <div class="news-date">⏱️ {n['published']}</div>
+                <div class="news-source">Source : {n['source']}</div>
             </div>
             """
         news_html += '</div>'
         st.markdown(news_html, unsafe_allow_html=True)
+    else:
+        st.info("Aucune actualité récente chargée.")
 
 # --- COLONNE DROITE ---
 with c_right:
