@@ -19,7 +19,7 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Marge haute fortement augmentée pour passer sous la barre Streamlit */
+    /* Marge haute pour passer sous la barre Streamlit */
     .block-container { padding-top: 4.5rem !important; padding-bottom: 0.8rem !important; }
     .stApp { background-color: #0c0f12; color: #d1d4dc; }
     
@@ -189,8 +189,11 @@ components.html(header_html, height=80)
 @st.cache_data(ttl=120)
 def fetch_forex_factory_red_folder():
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             events = response.json()
             
@@ -209,7 +212,8 @@ def fetch_forex_factory_red_folder():
                 if item.get("impact") == "High":
                     date_str = item.get("date", "")
                     if date_str:
-                        dt = datetime.fromisoformat(date_str)
+                        clean_date_str = date_str.replace("Z", "+00:00")
+                        dt = datetime.fromisoformat(clean_date_str)
                         if p_tz:
                             dt_local = dt.astimezone(p_tz)
                         else:
